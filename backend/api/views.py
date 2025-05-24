@@ -1,28 +1,22 @@
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
+from rest_framework.permissions import IsAuthenticated
 from django.http import HttpResponse
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404
 from django.db.models import Sum
 from djoser.views import UserViewSet
-import csv
-import io
-import hashlib
-import base64
-from django.core.cache import cache
 import logging
 from django.contrib.auth import get_user_model
+from reportlab.pdfgen import canvas
+from io import BytesIO
 
-from django.conf import settings
 from .serializers import (
     RecipeSerializer,
     IngredientSerializer,
-    AddFavorite,
-    UserSerializer,
-    FollowSerializer,
     CustomUserSerializer,
     TagSerializer,
+    RecipeCreateSerializer,
 )
 from recipes.models import (
     Recipe,
@@ -30,9 +24,6 @@ from recipes.models import (
     Favorite,
     ShoppingCart,
     RecipeIngredient,
-    RecipeShortLink,
-    User,
-    Follow,
     Tag,
 )
 from .filters import IngredientFilter, RecipeFilter
@@ -166,6 +157,32 @@ class RecipeViewSet(viewsets.ModelViewSet):
             .annotate(amount=Sum("amount"))
         )
 
+        format_type = request.query_params.get("format", "txt")
+
+        if format_type == "pdf":
+            buffer = BytesIO()
+            p = canvas.Canvas(buffer)
+            p.drawString(100, 800, "Shopping List:")
+            y = 750
+
+            for ingredient in ingredients:
+                text = (
+                    f'{ingredient["ingredient__name"]} - '
+                    f'{ingredient["amount"]} '
+                    f'{ingredient["ingredient__measurement_unit"]}'
+                )
+                p.drawString(100, y, text)
+                y -= 20
+
+            p.showPage()
+            p.save()
+            buffer.seek(0)
+
+            response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
+            response["Content-Disposition"] = 'attachment; filename="shopping_list.pdf"'
+            return response
+
+        # Default to txt format
         shopping_list = ["Shopping List:\n"]
         for ingredient in ingredients:
             shopping_list.append(
@@ -177,39 +194,3 @@ class RecipeViewSet(viewsets.ModelViewSet):
         response = HttpResponse("".join(shopping_list), content_type="text/plain")
         response["Content-Disposition"] = 'attachment; filename="shopping_list.txt"'
         return response
-
-    @action(detail=True, methods=["get"], url_path="get_link")
-    def get_link(self, request, pk=None):
-        recipe = self.get_object()
-        hash_input = f"{recipe.id}{recipe.name}{recipe.created_at}"
-        url_hash = self.generate_hash(hash_input)
-
-        short_link, created = RecipeShortLink.objects.get_or_create(
-            recipe=recipe, defaults={"url_hash": url_hash}
-        )
-
-        short_url = f"{settings.BASE_URL}/a/r/{short_link.url_hash}"
-        return Response({"short_link": short_url})
-
-    def generate_hash(self, input_str):
-        """Генерация 8-символьного хэша"""
-        # Создание хэша в формате SHA256
-        hash_bytes = hashlib.sha256(input_str.encode()).digest()
-        # Кодируем в base64 и берем первые 8 символов
-        return base64.urlsafe_b64encode(hash_bytes).decode()[:8]
-
-
-def redirect_by_hash(request, url_hash):
-    try:
-        cache_key = f"recipe_hash_{url_hash}"
-        recipe_id = cache.get(cache_key)
-
-        if not recipe_id:
-            short_link = get_object_or_404(RecipeShortLink, url_hash=url_hash)
-            recipe_id = short_link.recipe.id
-            cache.set(cache_key, recipe_id, 3600)
-
-        return redirect(f"{settings.BASE_URL}/api/recipes/{recipe_id}")
-    except Exception as e:
-        logger.error(f"Error redirecting hash {url_hash}: {str(e)}")
-        return Response(status=status.HTTP_404_NOT_FOUND)

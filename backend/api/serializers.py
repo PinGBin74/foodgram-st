@@ -11,6 +11,7 @@ from recipes.models import (
     ShoppingCart,
     Tag,
 )
+from .fields import Base64ImageField
 
 User = get_user_model()
 
@@ -20,7 +21,14 @@ class CustomUserCreateSerializer(UserCreateSerializer):
 
     class Meta:
         model = User
-        fields = ("email", "id", "username", "first_name", "last_name", "password")
+        fields = (
+            "email",
+            "id",
+            "username",
+            "first_name",
+            "last_name",
+            "password",
+        )
 
 
 class CustomUserSerializer(UserSerializer):
@@ -30,7 +38,14 @@ class CustomUserSerializer(UserSerializer):
 
     class Meta:
         model = User
-        fields = ("email", "id", "username", "first_name", "last_name", "is_subscribed")
+        fields = (
+            "email",
+            "id",
+            "username",
+            "first_name",
+            "last_name",
+            "is_subscribed",
+        )
 
     def get_is_subscribed(self, obj):
         request = self.context.get("request")
@@ -79,7 +94,7 @@ class RecipeSerializer(serializers.ModelSerializer):
     )
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
-    image = serializers.Base64ImageField()
+    image = Base64ImageField()
 
     class Meta:
         model = Recipe
@@ -123,12 +138,22 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating recipes."""
 
     ingredients = RecipeIngredientCreateSerializer(many=True)
-    tags = serializers.PrimaryKeyRelatedField(queryset=Tag.objects.all(), many=True)
-    image = serializers.Base64ImageField()
+    tags = serializers.PrimaryKeyRelatedField(
+        queryset=Tag.objects.all(),
+        many=True,
+    )
+    image = Base64ImageField()
 
     class Meta:
         model = Recipe
-        fields = ("ingredients", "tags", "image", "name", "text", "cooking_time")
+        fields = (
+            "ingredients",
+            "tags",
+            "image",
+            "name",
+            "text",
+            "cooking_time",
+        )
 
     def create(self, validated_data):
         ingredients_data = validated_data.pop("ingredients")

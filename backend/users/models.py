@@ -18,6 +18,13 @@ class User(AbstractUser):
         "Last name",
         max_length=150,
     )
+    follower = models.ManyToManyField(
+        'self',
+        symmetrical=False,
+        related_name='following',
+        through='recipes.Subscription',
+        through_fields=('user', 'author'),
+    )
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["username", "first_name", "last_name"]

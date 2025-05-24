@@ -134,3 +134,29 @@ class ShoppingCart(models.Model):
                 fields=["user", "recipe"], name="unique_shopping_cart"
             )
         ]
+
+
+class Subscription(models.Model):
+    """Model for user subscriptions."""
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="subscriptions",
+        verbose_name="User",
+    )
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="subscribers",
+        verbose_name="Author",
+    )
+
+    class Meta:
+        verbose_name = "Subscription"
+        verbose_name_plural = "Subscriptions"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "author"], name="unique_subscription"
+            )
+        ]

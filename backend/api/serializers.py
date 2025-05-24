@@ -10,6 +10,7 @@ from recipes.models import (
     RecipeIngredient,
     ShoppingCart,
     Tag,
+    Subscription,
 )
 from .fields import Base64ImageField
 
@@ -35,6 +36,8 @@ class CustomUserSerializer(UserSerializer):
     """Serializer for user model."""
 
     is_subscribed = serializers.SerializerMethodField()
+    recipes = serializers.SerializerMethodField()
+    recipes_count = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -45,13 +48,29 @@ class CustomUserSerializer(UserSerializer):
             "first_name",
             "last_name",
             "is_subscribed",
+            "recipes",
+            "recipes_count",
         )
 
     def get_is_subscribed(self, obj):
         request = self.context.get("request")
         if request is None or request.user.is_anonymous:
             return False
-        return request.user.follower.filter(author=obj).exists()
+        return Subscription.objects.filter(user=request.user, author=obj).exists()
+
+    def get_recipes(self, obj):
+        request = self.context.get("request")
+        recipes = obj.recipes.all()
+        if request and request.query_params.get("recipes_limit"):
+            try:
+                limit = int(request.query_params.get("recipes_limit"))
+                recipes = recipes[:limit]
+            except ValueError:
+                pass
+        return RecipeSerializer(recipes, many=True, context=self.context).data
+
+    def get_recipes_count(self, obj):
+        return obj.recipes.count()
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -115,13 +134,13 @@ class RecipeSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         if request is None or request.user.is_anonymous:
             return False
-        return request.user.favorites.filter(recipe=obj).exists()
+        return Favorite.objects.filter(user=request.user, recipe=obj).exists()
 
     def get_is_in_shopping_cart(self, obj):
         request = self.context.get("request")
         if request is None or request.user.is_anonymous:
             return False
-        return request.user.shopping_cart.filter(recipe=obj).exists()
+        return ShoppingCart.objects.filter(user=request.user, recipe=obj).exists()
 
 
 class RecipeIngredientCreateSerializer(serializers.ModelSerializer):

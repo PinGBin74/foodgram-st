@@ -25,6 +25,7 @@ from recipes.models import (
     ShoppingCart,
     RecipeIngredient,
     Tag,
+    Subscription,
 )
 from .filters import IngredientFilter, RecipeFilter
 from .permissions import IsAuthorOrReadOnly
@@ -54,28 +55,28 @@ class CustomUserViewSet(UserViewSet):
                     {"error": "You cannot subscribe to yourself."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            if user.follower.filter(author=author).exists():
+            if Subscription.objects.filter(user=user, author=author).exists():
                 return Response(
                     {"error": "You are already subscribed to this user."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            user.follower.create(author=author)
+            Subscription.objects.create(user=user, author=author)
             serializer = self.get_serializer(author)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         if request.method == "DELETE":
-            if not user.follower.filter(author=author).exists():
+            if not Subscription.objects.filter(user=user, author=author).exists():
                 return Response(
                     {"error": "You are not subscribed to this user."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            user.follower.filter(author=author).delete()
+            Subscription.objects.filter(user=user, author=author).delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False, permission_classes=[IsAuthenticated])
     def subscriptions(self, request):
         user = request.user
-        queryset = User.objects.filter(following__user=user)
+        queryset = User.objects.filter(subscribers__user=user)
         pages = self.paginate_queryset(queryset)
         serializer = self.get_serializer(pages, many=True)
         return self.get_paginated_response(serializer.data)
@@ -130,7 +131,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         recipe = get_object_or_404(Recipe, pk=pk)
 
         if request.method == "POST":
-            if getattr(user, related_name).filter(recipe=recipe).exists():
+            if model.objects.filter(user=user, recipe=recipe).exists():
                 return Response(
                     {"error": f"Recipe is already in {related_name}."},
                     status=status.HTTP_400_BAD_REQUEST,
@@ -140,12 +141,12 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         if request.method == "DELETE":
-            if not getattr(user, related_name).filter(recipe=recipe).exists():
+            if not model.objects.filter(user=user, recipe=recipe).exists():
                 return Response(
                     {"error": f"Recipe is not in {related_name}."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            getattr(user, related_name).filter(recipe=recipe).delete()
+            model.objects.filter(user=user, recipe=recipe).delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False, permission_classes=[IsAuthenticated])

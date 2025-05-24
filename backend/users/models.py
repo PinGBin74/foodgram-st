@@ -1,38 +1,26 @@
-from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.contrib.auth.models import AbstractUser
 
 
 class User(AbstractUser):
-    """Custom user model."""
-
+    first_name = models.CharField(verbose_name="Имя", max_length=150)
+    last_name = models.CharField(verbose_name="Фамилия", max_length=150)
     email = models.EmailField(
-        "Email address",
+        verbose_name="Электронная почта",
         max_length=254,
         unique=True,
     )
-    first_name = models.CharField(
-        "First name",
-        max_length=150,
+    username = models.CharField(
+        verbose_name="Имя пользователя", max_length=150, unique=True
     )
-    last_name = models.CharField(
-        "Last name",
-        max_length=150,
-    )
-    follower = models.ManyToManyField(
-        "self",
-        symmetrical=False,
-        related_name="following",
-        through="recipes.Subscription",
-        through_fields=("user", "author"),
-    )
+    avatar = models.ImageField(verbose_name="Фото профиля", upload_to="avatar_photos/")
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["username", "first_name", "last_name"]
+    REQUIRED_FIELDS = ["first_name", "last_name", "username"]
 
     class Meta:
-        verbose_name = "User"
-        verbose_name_plural = "Users"
-        ordering = ["id"]
+        verbose_name = "Пользователь"
+        verbose_name_plural = "Пользователи"
 
     def __str__(self):
-        return self.email
+        return self.username

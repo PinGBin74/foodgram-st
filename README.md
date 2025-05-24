@@ -26,7 +26,7 @@ Foodgram is a social network for food lovers. Users can share their recipes, sub
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/foodgram.git
+git clone https://github.com/PinGBin74/foodgram.git
 cd foodgram
 ```
 

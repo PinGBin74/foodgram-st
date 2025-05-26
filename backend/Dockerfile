@@ -3,9 +3,6 @@ FROM python:3.9.13
 # Установка рабочей директории
 WORKDIR /app
 
-# Установка libpq-dev
-RUN apt-get update && apt-get install -y libpq-dev
-
 # Установка зависимостей
 COPY requirements.txt .
 

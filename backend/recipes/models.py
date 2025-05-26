@@ -1,7 +1,6 @@
-from django.db import models
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
-
+from django.db import models
 
 User = get_user_model()
 
@@ -50,7 +49,6 @@ class Recipe(models.Model):
         verbose_name="Ингредиенты",
         through="RecipeIngredient",
         related_name="recipes",
-        blank=False,
     )
     cooking_time = models.PositiveSmallIntegerField(
         verbose_name="Время приготовления (минуты)",
@@ -94,52 +92,66 @@ class RecipeIngredient(models.Model):
     )
 
     class Meta:
-        verbose_name = "Ингридиент рецепта"
-        verbose_name_plural = "Ингридиенты рецептов"
+        verbose_name = "Ингредиент рецепта"
+        verbose_name_plural = "Ингредиенты рецептов"
 
     def __str__(self):
-        name = self.ingredient.name
-        amount = self.amount
-        unit = self.ingredient.measurement_unit
-        return f"{name} - {amount} {unit}"
+        return (
+            f"{self.ingredient.name} - "
+            f"{self.amount} {self.ingredient.measurement_unit}"
+        )
 
 
 class ShoppingCart(models.Model):
     user = models.ForeignKey(
-        User, verbose_name="Пользователь", on_delete=models.CASCADE
+        User,
+        verbose_name="Пользователь",
+        on_delete=models.CASCADE,
     )
-    recipe = models.ForeignKey(Recipe, verbose_name="Рецепт", on_delete=models.CASCADE)
+    recipe = models.ForeignKey(
+        Recipe,
+        verbose_name="Рецепт",
+        on_delete=models.CASCADE,
+    )
 
     class Meta:
-        verbose_name = "Корзина покупок"
-        verbose_name_plural = "Корзины покупок"
+        verbose_name = "Список покупок"
+        verbose_name_plural = "Списки покупок"
         constraints = [
             models.UniqueConstraint(
-                fields=["user", "recipe"], name="unique_user_recipe_in_shopping_cart"
+                fields=["user", "recipe"],
+                name="unique_shopping_cart_recipe",
             )
         ]
 
     def __str__(self):
-        return f"{self.user} {self.recipe}"
+        return f"{self.user.username} - {self.recipe.name}"
 
 
 class Favorite(models.Model):
     user = models.ForeignKey(
-        User, verbose_name="Пользователь", on_delete=models.CASCADE
+        User,
+        verbose_name="Пользователь",
+        on_delete=models.CASCADE,
     )
-    recipe = models.ForeignKey(Recipe, verbose_name="Рецепты", on_delete=models.CASCADE)
+    recipe = models.ForeignKey(
+        Recipe,
+        verbose_name="Рецепт",
+        on_delete=models.CASCADE,
+    )
 
     class Meta:
         verbose_name = "Избранное"
-        verbose_name_plural = "Избранные"
+        verbose_name_plural = "Избранное"
         constraints = [
             models.UniqueConstraint(
-                fields=["user", "recipe"], name="unique_user_recipe_in_favorites"
+                fields=["user", "recipe"],
+                name="unique_user_recipe_favorite",
             )
         ]
 
     def __str__(self):
-        return f"{self.user} {self.recipe}"
+        return f"{self.user.username} - {self.recipe.name}"
 
 
 class RecipeShortLink(models.Model):
@@ -162,13 +174,13 @@ class RecipeShortLink(models.Model):
 class Follow(models.Model):
     user = models.ForeignKey(
         User,
-        verbose_name="подписчик",
+        verbose_name="Подписчик",
         related_name="follower",
         on_delete=models.CASCADE,
     )
     author = models.ForeignKey(
         User,
-        verbose_name="Автор рецепта",
+        verbose_name="Автор",
         related_name="following",
         on_delete=models.CASCADE,
     )
@@ -178,12 +190,14 @@ class Follow(models.Model):
         verbose_name_plural = "Подписки"
         constraints = [
             models.UniqueConstraint(
-                fields=["user", "author"], name="unique_user_author_subscription"
+                fields=["user", "author"],
+                name="unique_user_author_subscription",
             ),
             models.CheckConstraint(
-                check=~models.Q(user=models.F("author")), name="prevent_self_follow"
+                check=~models.Q(user=models.F("author")),
+                name="prevent_self_follow",
             ),
         ]
 
     def __str__(self):
-        return f"{self.user} {self.author}"
+        return f"{self.user.username} -> {self.author.username}"

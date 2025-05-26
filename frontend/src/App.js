@@ -142,9 +142,16 @@ function App() {
   };
 
   const loadSingleItem = ({ id, callback }) => {
-    setTimeout((_) => {
-      callback();
-    }, 3000);
+    api
+      .getRecipe({
+        recipe_id: id,
+      })
+      .then((res) => {
+        callback(res);
+      })
+      .catch((err) => {
+        history.push("/not-found");
+      });
   };
 
   const history = useHistory();

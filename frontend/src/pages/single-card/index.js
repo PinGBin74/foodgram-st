@@ -64,14 +64,18 @@ const SingleCard = ({ loadItem, updateOrders }) => {
   };
 
   useEffect((_) => {
-    if (!id) {
-      return;
-    }
-    loadItem({ id, callback: (res) => {
-      setRecipe(res);
-      setLoading(false);
-    }});
-  }, [id]);
+    api
+      .getRecipe({
+        recipe_id: id,
+      })
+      .then((res) => {
+        setRecipe(res);
+        setLoading(false);
+      })
+      .catch((err) => {
+        history.push("/not-found");
+      });
+  }, []);
 
   const { url } = useRouteMatch();
   const {

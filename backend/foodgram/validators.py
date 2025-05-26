@@ -1,17 +1,21 @@
 import re
 from django.core.exceptions import ValidationError
+from django.utils.deconstruct import deconstructible
 
 
-class AllowedCharactersPasswordValidator:
-    def __init__(self, pattern):
+@deconstructible
+class AllowedCharactersUsernameValidator:
+    def __init__(self, pattern=r"^[\w.@+-]+$"):
         self.pattern = pattern
         self.regex = re.compile(pattern)
 
-    def validate(self, password, user=None):
-        if not self.regex.fullmatch(password):
+    def __call__(self, value):
+        if not self.regex.fullmatch(value):
             raise ValidationError(
-                f"Пароль содержит недопустимые символы. Разрешены только: {self.pattern}"
+                "Username может содержать только латинские буквы, цифры и знаки @/./+/-/_"
             )
 
     def get_help_text(self):
-        return f"Пароль должен содержать только символы, соответствующие шаблону: {self.pattern}"
+        return (
+            "Username может содержать только латинские буквы, цифры и знаки @/./+/-/_"
+        )

@@ -40,7 +40,7 @@ class Recipe(models.Model):
         on_delete=models.CASCADE,
         db_index=True,
     )
-    description = models.TextField(verbose_name="Описание")
+    text = models.TextField(verbose_name="Описание")
     image = models.ImageField(
         verbose_name="Фотография блюда",
         upload_to="recipes_photo/",
@@ -50,6 +50,7 @@ class Recipe(models.Model):
         verbose_name="Ингредиенты",
         through="RecipeIngredient",
         related_name="recipes",
+        blank=False,
     )
     cooking_time = models.PositiveSmallIntegerField(
         verbose_name="Время приготовления (минуты)",

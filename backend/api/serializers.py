@@ -41,7 +41,8 @@ class Base64ImageField(serializers.ImageField):
             if isinstance(data, str) and data.startswith("data:image"):
                 parts = data.split(";base64,")
                 if len(parts) != 2:
-                    raise serializers.ValidationError(ERROR_MESSAGES["invalid_base64"])
+                    raise serializers.ValidationError(
+                        ERROR_MESSAGES["invalid_base64"])
 
                 format_part = parts[0]
                 imgstr = parts[1]
@@ -110,7 +111,8 @@ class IngredientSerializer(serializers.ModelSerializer):
 class RecipeIngredientSerializer(serializers.ModelSerializer):
     id = serializers.ReadOnlyField(source="ingredient.id")
     name = serializers.ReadOnlyField(source="ingredient.name")
-    measurement_unit = serializers.ReadOnlyField(source="ingredient.measurement_unit")
+    measurement_unit = serializers.ReadOnlyField(
+        source="ingredient.measurement_unit")
 
     class Meta:
         model = RecipeIngredient
@@ -120,7 +122,8 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
 class RecipeIngredientCreateSerializer(serializers.ModelSerializer):
     id = serializers.PrimaryKeyRelatedField(queryset=Ingredient.objects.all())
     amount = serializers.IntegerField(
-        validators=[MinValueValidator(1, message="Количество не может быть меньше 1")]
+        validators=[MinValueValidator(
+            1, message="Количество не может быть меньше 1")]
     )
 
     class Meta:
@@ -193,7 +196,8 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         for item in value:
             ingredient = get_object_or_404(Ingredient, id=item["id"].id)
             if ingredient in ingredients_list:
-                raise serializers.ValidationError("Ингредиенты не должны повторяться")
+                raise serializers.ValidationError(
+                    "Ингредиенты не должны повторяться")
             ingredients_list.append(ingredient)
         return value
 

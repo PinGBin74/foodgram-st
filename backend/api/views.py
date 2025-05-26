@@ -54,7 +54,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         serializer.save(author=self.request.user)
 
     @action(
-        detail=True, methods=["post", "delete"], permission_classes=[IsAuthenticated]
+        detail=True, methods=["post", "delete"], permission_classes=[
+            IsAuthenticated]
     )
     def favorite(self, request, pk):
         if request.method == "POST":
@@ -66,7 +67,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         )
 
     @action(
-        detail=True, methods=["post", "delete"], permission_classes=[IsAuthenticated]
+        detail=True, methods=["post", "delete"], permission_classes=[
+            IsAuthenticated]
     )
     def shopping_cart(self, request, pk):
         if request.method == "POST":
@@ -92,12 +94,15 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if obj.exists():
             obj.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response({"errors": error_message}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"errors": error_message}, status=status.
+                        HTTP_400_BAD_REQUEST)
 
-    @action(detail=False, permission_classes=[IsAuthenticated], methods=["get"])
+    @action(detail=False, permission_classes=[
+        IsAuthenticated], methods=["get"])
     def download_shopping_cart(self, request):
         ingredients = (
-            RecipeIngredient.objects.filter(recipe__shopping_cart__user=request.user)
+            RecipeIngredient.objects.filter(
+                recipe__shopping_cart__user=request.user)
             .values("ingredient__name", "ingredient__measurement_unit")
             .annotate(amount=Sum("amount"))
         )
@@ -110,8 +115,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 f"{ingredient['ingredient__measurement_unit']}\n"
             )
 
-        response = HttpResponse("".join(shopping_list), content_type="text/plain")
-        response["Content-Disposition"] = 'attachment; filename="shopping_list.txt"'
+        response = HttpResponse("".join
+                                (shopping_list), content_type="text/plain")
+        response["Content-Disposition"
+                 ] = 'attachment; filename="shopping_list.txt"'
         return response
 
 

@@ -1,7 +1,6 @@
 import json
-import os
-
 import django
+import os
 from recipes.models import Ingredient
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "foodgram.settings")

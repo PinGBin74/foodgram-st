@@ -1,6 +1,7 @@
+from django.db import models
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
-from django.db import models
+
 
 User = get_user_model()
 
@@ -49,6 +50,7 @@ class Recipe(models.Model):
         verbose_name="Ингредиенты",
         through="RecipeIngredient",
         related_name="recipes",
+        blank=False,
     )
     cooking_time = models.PositiveSmallIntegerField(
         verbose_name="Время приготовления (минуты)",
@@ -89,75 +91,76 @@ class RecipeIngredient(models.Model):
     amount = models.PositiveSmallIntegerField(
         verbose_name="Количество",
         validators=[MinValueValidator(
-            1, message="Количество не может быть менее 1")],
+            1,
+            message="Количество не может быть менее 1")
+        ],
     )
 
     class Meta:
-        verbose_name = "Ингредиент рецепта"
-        verbose_name_plural = "Ингредиенты рецептов"
+        verbose_name = "Ингридиент рецепта"
+        verbose_name_plural = "Ингридиенты рецептов"
 
     def __str__(self):
-        return (
-            f"{self.ingredient.name} - "
-            f"{self.amount} {self.ingredient.measurement_unit}"
-        )
+        name = self.ingredient.name
+        amount = self.amount
+        unit = self.ingredient.measurement_unit
+        return f"{name} - {amount} {unit}"
 
 
 class ShoppingCart(models.Model):
     user = models.ForeignKey(
-        User,
-        verbose_name="Пользователь",
-        on_delete=models.CASCADE,
+        User, verbose_name="Пользователь", on_delete=models.CASCADE
     )
     recipe = models.ForeignKey(
         Recipe,
         verbose_name="Рецепт",
-        on_delete=models.CASCADE,
+        on_delete=models.CASCADE
     )
 
     class Meta:
-        verbose_name = "Список покупок"
-        verbose_name_plural = "Списки покупок"
+        verbose_name = "Корзина покупок"
+        verbose_name_plural = "Корзины покупок"
         constraints = [
             models.UniqueConstraint(
                 fields=["user", "recipe"],
-                name="unique_shopping_cart_recipe",
+                name="unique_user_recipe_in_shopping_cart"
             )
         ]
 
     def __str__(self):
-        return f"{self.user.username} - {self.recipe.name}"
+        return f"{self.user} {self.recipe}"
 
 
 class Favorite(models.Model):
     user = models.ForeignKey(
-        User,
-        verbose_name="Пользователь",
-        on_delete=models.CASCADE,
+        User, verbose_name="Пользователь", on_delete=models.CASCADE
     )
     recipe = models.ForeignKey(
         Recipe,
-        verbose_name="Рецепт",
-        on_delete=models.CASCADE,
+        verbose_name="Рецепты",
+        on_delete=models.CASCADE
     )
 
     class Meta:
         verbose_name = "Избранное"
-        verbose_name_plural = "Избранное"
+        verbose_name_plural = "Избранные"
         constraints = [
             models.UniqueConstraint(
                 fields=["user", "recipe"],
-                name="unique_user_recipe_favorite",
+                name="unique_user_recipe_in_favorites"
             )
         ]
 
     def __str__(self):
-        return f"{self.user.username} - {self.recipe.name}"
+        return f"{self.user} {self.recipe}"
 
 
 class RecipeShortLink(models.Model):
-    recipe = models.ForeignKey(Recipe, verbose_name="Рецепт", on_delete=models.
-                               CASCADE)
+    recipe = models.ForeignKey(
+        Recipe,
+        verbose_name="Рецепт",
+        on_delete=models.CASCADE
+    )
     url_hash = models.CharField(
         verbose_name="Хэш", max_length=10, unique=True, db_index=True
     )
@@ -176,13 +179,13 @@ class RecipeShortLink(models.Model):
 class Follow(models.Model):
     user = models.ForeignKey(
         User,
-        verbose_name="Подписчик",
+        verbose_name="подписчик",
         related_name="follower",
         on_delete=models.CASCADE,
     )
     author = models.ForeignKey(
         User,
-        verbose_name="Автор",
+        verbose_name="Автор рецепта",
         related_name="following",
         on_delete=models.CASCADE,
     )
@@ -193,13 +196,13 @@ class Follow(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["user", "author"],
-                name="unique_user_author_subscription",
+                name="unique_user_author_subscription"
             ),
             models.CheckConstraint(
                 check=~models.Q(user=models.F("author")),
-                name="prevent_self_follow",
+                name="prevent_self_follow"
             ),
         ]
 
     def __str__(self):
-        return f"{self.user.username} -> {self.author.username}"
+        return f"{self.user} {self.author}"

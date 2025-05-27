@@ -25,7 +25,7 @@ from .serializers import (
     AddFavorite,
     UserSerializer,
     FollowSerializer,
-    AddAvatar,
+    AvatarAdd,
 )
 from recipes.models import (
     Recipe,
@@ -43,13 +43,13 @@ logger = logging.getLogger(__name__)
 
 
 ERRORS = {
-    "self_subscribe": "Нельзя подписаться на самого себя!",
+    "already_in_favorites": "Рецепт уже в избранном!",
     "already_subscribed": "Вы уже подписаны на этого пользователя!",
     "not_subscribed": "Вы не подписаны на этого пользователя!",
-    "already_in_favorites": "Рецепт уже в избранном!",
     "not_in_favorites": "Рецепт не в избранном!",
     "already_in_cart": "Рецепт уже добавлен в корзину!",
     "not_in_cart": "Рецепт не в корзине!",
+    "self_subscribe": "Нельзя подписаться на самого себя!",
     "no_subscriptions": "Вы ни на кого не подписаны.",
     "no_image": "Необходимо загрузить изображение",
     "cant_edit": "Вы не можете изменять чужие рецепты",
@@ -70,7 +70,7 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
         return queryset
 
 
-class FollowViewSet(UserViewSet):
+class FollowingViewSet(UserViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = (IsAuthenticatedOrReadOnly,)
@@ -167,7 +167,7 @@ class FollowViewSet(UserViewSet):
                     {"errors": ERRORS["no_image"]},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            serializer = AddAvatar(user, data=request.data, partial=True)
+            serializer = AvatarAdd(user, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)

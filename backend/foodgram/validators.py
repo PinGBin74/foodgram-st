@@ -4,7 +4,7 @@ from django.utils.deconstruct import deconstructible
 
 
 @deconstructible
-class AllowedCharactersUsernameValidator:
+class AllowedUsernameValidator:
     def __init__(self, pattern=r"^[\w.@+-]+$"):
         self.pattern = pattern
         self.regex = re.compile(pattern)

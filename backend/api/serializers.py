@@ -106,6 +106,31 @@ class UserSerializer(serializers.ModelSerializer):
         return Follow.objects.filter(user=request.user, author=obj).exists()
 
 
+"""
+class CreateUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('email', 'id', 'username', 'first_name',
+                  'last_name', 'password')
+        extra_kwargs = {
+            'password': {'write_only': True},
+            'username': {
+                'validators': [AllowedCharactersUsernameValidator()]
+            }
+        }
+
+    def create(self, validated_data):
+        user = User.objects.create_user(
+            email=validated_data['email'],
+            username=validated_data['username'],
+            first_name=validated_data.get('first_name', ''),
+            last_name=validated_data.get('last_name', ''),
+            password=validated_data['password']
+        )
+        return user
+"""
+
+
 class ShortRecipeSerializer(serializers.ModelSerializer):
     """Укороченный сериализатор для рецептов в подписках"""
 
@@ -288,34 +313,9 @@ class AddFavorite(serializers.ModelSerializer):
         fields = ("id", "name", "image", "cooking_time")
 
 
-class AvatarAdd(serializers.ModelSerializer):
+class AddAvatar(serializers.ModelSerializer):
     avatar = Base64ImageField(required=True)
 
     class Meta:
         model = User
         fields = ("avatar",)
-
-
-"""
-class CreateUserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ('email', 'id', 'username', 'first_name',
-                  'last_name', 'password')
-        extra_kwargs = {
-            'password': {'write_only': True},
-            'username': {
-                'validators': [AllowedUsernameValidator()]
-            }
-        }
-
-    def create(self, validated_data):
-        user = User.objects.create_user(
-            email=validated_data['email'],
-            username=validated_data['username'],
-            first_name=validated_data.get('first_name', ''),
-            last_name=validated_data.get('last_name', ''),
-            password=validated_data['password']
-        )
-        return user
-"""

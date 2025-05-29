@@ -53,24 +53,26 @@ DB_HOST=db
 DB_PORT=5432
 ```
 
-3. Запустите проект с помощью Docker Compose:
+3. Перейти в папку frontend:
 ```bash
-docker-compose up -d
+cd fronend
 ```
 
-4. Примените миграции:
+4. Выполнить две команды:
 ```bash
-docker-compose exec backend python manage.py migrate
+npm install
+npm start build
 ```
 
-5. Создайте суперпользователя:
+5. Запустите проект с помощью Docker Compose:
 ```bash
-docker-compose exec backend python manage.py createsuperuser
+
+cd .. && cd infra && docker-compose up --build
 ```
 
-6. Соберите статические файлы:
+6. Загрузить ингредиенты.
 ```bash
-docker-compose exec backend python manage.py collectstatic --no-input
+docker-compose exec backend python manage.py load_ingredients
 ```
 
 После этого проект будет доступен по адресу http://localhost/

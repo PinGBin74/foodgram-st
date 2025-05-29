@@ -1,14 +1,8 @@
-# build environment
-FROM node:21.7.1-alpine as builder
+# build env
+FROM node:21.7.1-alpine
 WORKDIR /app
 COPY package*.json ./
 RUN npm install --legacy-peer-deps
-COPY . .
+COPY . ./
 RUN npm run build
-
-# production environment
-FROM nginx:1.25.4-alpine
-COPY --from=builder /app/build /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+CMD cp -r build result_build

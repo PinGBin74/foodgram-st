@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
             field=models.CharField(
                 max_length=150,
                 unique=True,
-                validators=[foodgram.validators.AllowedUsernameValidator()],
+                validators=[foodgram.validators.AllowedCharactersUsernameValidator()],
                 verbose_name="Имя пользователя",
             ),
         ),

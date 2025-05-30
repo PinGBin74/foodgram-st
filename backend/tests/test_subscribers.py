@@ -13,8 +13,9 @@ class TestSubscribers:
 
     def test_02_subscribe_with_query(self, user_client_with_token, admin_user):
         recipes_limit = 1
+        url = self.url_subscribe_detail(admin_user.id)
         response = user_client_with_token.post(
-            self.url_subscribe_detail(admin_user.id) + f"?recipes_limit={recipes_limit}"
+            f"{url}?recipes_limit={recipes_limit}"
         )
         json_response = response.json()["recipes"]
         assert (

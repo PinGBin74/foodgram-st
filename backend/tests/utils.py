@@ -3,7 +3,9 @@ from http import HTTPStatus
 
 def check_pagination(json_response):
     for field in ("count", "next", "previous", "results"):
-        assert field in json_response, f"Response does not contain field {field!r}"
+        assert field in json_response, (
+            f"Response does not contain field {field!r}"
+        )
 
 
 def check_recipe_response(result):
@@ -33,16 +35,21 @@ def check_recipe_response(result):
         "avatar",
     )
     for field in fields:
-        assert field in result_author, f"Missing field {field}"
-    assert isinstance(result["ingredients"], list), "Ingredients should be a list"
+        assert field in result_author, (
+            f"Missing field {field}"
+        )
+    assert isinstance(result["ingredients"], list), (
+        "Ingredients should be a list"
+    )
 
-    if result[
-        "ingredients"
-    ]:  # Проверяем поля ингредиентов только если список не пустой
+    # Проверяем поля ингредиентов только если список не пустой
+    if result["ingredients"]:
         result_ingredients = result["ingredients"][0]
         fields = ("id", "name", "measurement_unit", "amount")
         for field in fields:
-            assert field in result_ingredients, f"Missing field {field}"
+            assert field in result_ingredients, (
+                f"Missing field {field}"
+            )
 
 
 def check_author_recipe(current_client, expected_status, url_func):
@@ -63,12 +70,14 @@ def check_author_recipe(current_client, expected_status, url_func):
 
         fields = ("id", "name", "image", "cooking_time")
         json_response = response.json()
-        assert len(json_response) == len(
-            fields
-        ), f"Expected {len(fields)} fields, got {len(json_response)}"
+        assert len(json_response) == len(fields), (
+            f"Expected {len(fields)} fields, got {len(json_response)}"
+        )
 
         for field in fields:
-            assert field in json_response, f"Field {field} not found in response"
+            assert field in json_response, (
+                f"Field {field} not found in response"
+            )
 
     response = current_client.delete(url, content_type="application/json")
     assert response.status_code in (

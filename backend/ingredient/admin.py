@@ -1,9 +1,9 @@
 from django.contrib import admin
 
+from recipes.models import RecipeIngredient, RecipeShortLink
+
 from .models import (
     Ingredient,
-    RecipeIngredient,
-    RecipeShortLink,
 )
 
 

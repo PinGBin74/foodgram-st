@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from backend.recipes.serializers import Base64ImageField
+from const.photo import Base64ImageField
 from recipes.models import (
     Follow,
     User,

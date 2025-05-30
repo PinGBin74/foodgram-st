@@ -1,8 +1,6 @@
-import base64
-import binascii
-from django.core.files.base import ContentFile
 from rest_framework import serializers, status
 
+from const.photo import Base64ImageField
 from users.serializers import UserSerializer
 from const.errors import ERROR_MESSAGES
 from ingredient.serializers import (
@@ -17,42 +15,6 @@ from recipes.models import (
     ShoppingCart,
     User,
 )
-
-ALLOWED_IMAGE_FORMATS = ["jpeg", "jpg", "png", "gif"]
-
-
-class Base64ImageField(serializers.ImageField):
-    """Поле для кодирования/декодирования изображения Base64"""
-
-    def to_internal_value(self, data):
-        try:
-            if isinstance(data, str) and data.startswith("data:image"):
-                parts = data.split(";base64,")
-                if len(parts) != 2:
-                    raise serializers.ValidationError(ERROR_MESSAGES["invalid_base64"])
-
-                format_part = parts[0]
-                imgstr = parts[1]
-
-                ext = format_part.split("/")[-1]
-                if ext not in ALLOWED_IMAGE_FORMATS:
-                    raise serializers.ValidationError(
-                        ERROR_MESSAGES["invalid_image_format"]
-                    )
-
-                try:
-                    decoded_file = base64.b64decode(imgstr)
-                except (TypeError, binascii.Error):
-                    raise serializers.ValidationError(
-                        ERROR_MESSAGES["invalid_base64_data"]
-                    )
-
-                data = ContentFile(decoded_file, name=f"photo.{ext}")
-
-            return super().to_internal_value(data)
-
-        except Exception as e:
-            raise serializers.ValidationError(str(e))
 
 
 class RecipeSerializer(serializers.ModelSerializer):
@@ -153,7 +115,7 @@ class RecipeSerializer(serializers.ModelSerializer):
                 RecipeIngredient.objects.bulk_create(recipe_ingredients)
             except Ingredient.DoesNotExist:
                 raise serializers.ValidationError(
-                    {"errors": "Один или несколько ингредиентов не существуют"},
+                    {"errors": ("Один или несколько ингредиентов не существуют")},
                     code=status.HTTP_400_BAD_REQUEST,
                 )
         return instance
@@ -200,35 +162,3 @@ class ShortRecipeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recipe
         fields = ("id", "name", "image", "cooking_time")
-
-
-class FollowSerializer(UserSerializer):
-    recipes = serializers.SerializerMethodField()
-    recipes_count = serializers.SerializerMethodField()
-
-    class Meta:
-        model = User
-        fields = (
-            "id",
-            "first_name",
-            "last_name",
-            "email",
-            "username",
-            "is_subscribed",
-            "avatar",
-            "recipes",
-            "recipes_count",
-        )
-
-    def get_recipes(self, obj):
-        request = self.context.get("request")
-        recipes = obj.recipes.all()
-
-        recipes_limit = request.query_params.get("recipes_limit")
-        if recipes_limit and recipes_limit.isdigit():
-            recipes = recipes[: int(recipes_limit)]
-
-        return ShortRecipeSerializer(recipes, many=True, context=self.context).data
-
-    def get_recipes_count(self, obj):
-        return obj.recipes.count()

@@ -5,9 +5,7 @@ from django.conf import settings
 from django.core.cache import cache
 import logging
 
-from .serializers import (
-    IngredientSerializer,
-)
+from ingredient.serializers import IngredientSimpleSerializer
 from recipes.models import (
     Ingredient,
     RecipeShortLink,
@@ -19,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
-    serializer_class = IngredientSerializer
+    serializer_class = IngredientSimpleSerializer
     pagination_class = None
 
     def get_queryset(self):

@@ -7,10 +7,8 @@ from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet
 
 
-from api.serializers import (
-    UserSerializer,
-    FollowSerializer,
-)
+from api.serializers import FollowSerializer
+from users.serializers import UserSerializer
 from recipes.serializers import AddAvatar
 from const.errors import ERRORS
 from recipes.models import (

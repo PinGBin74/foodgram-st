@@ -32,31 +32,48 @@ from recipes.models import (
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
+    """ViewSet для работы с рецептами.
+
+    Предоставляет CRUD операции для рецептов, а также дополнительные действия
+    для работы с избранным, списком покупок и генерации коротких ссылок.
+    """
     queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
     permission_classes = (IsAuthenticatedOrReadOnly,)
     pagination_class = LimitOffsetPagination
 
     def perform_create(self, serializer):
+        """Создает новый рецепт и
+        устанавливает текущего пользователя как автора.
+        """
         serializer.save(author=self.request.user)
 
     def perform_update(self, serializer):
+        """Обновляет рецепт, проверяя права доступа автора."""
         if serializer.instance.author != self.request.user:
             raise PermissionDenied(detail=ERRORS["cant_edit"])
         serializer.save()
 
     def perform_destroy(self, instance):
+        """Удаляет рецепт, проверяя права доступа автора."""
         if instance.author != self.request.user:
             raise PermissionDenied(detail=ERRORS["cant_delete"])
         instance.delete()
 
     def get_serializer_context(self):
-        """Добавляем request в контекст сериализатора"""
+        """Добавляет request в контекст
+        сериализатора для доступа к текущему пользователю.
+        """
         context = super().get_serializer_context()
         context["request"] = self.request
         return context
 
     def get_queryset(self):
+        """Возвращает отфильтрованный список рецептов.
+
+        Поддерживает фильтрацию по автору,
+        наличию в избранном и списке покупок.
+        """
         queryset = Recipe.objects.select_related("author").prefetch_related(
             "ingredients"
         )
@@ -84,6 +101,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         url_path="favorite",
     )
     def favorite(self, request, pk=None):
+        """Добавляет или удаляет рецепт из избранного пользователя."""
         recipe = get_object_or_404(Recipe, id=pk)
         user = request.user
         if request.method == "POST":
@@ -118,6 +136,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         url_path="shopping_cart",
     )
     def shopping_cart(self, request, pk=None):
+        """Добавляет или удаляет рецепт из списка покупок пользователя."""
         recipe = get_object_or_404(Recipe, id=pk)
         user = request.user
 
@@ -154,6 +173,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
         url_path="download_shopping_cart",
     )
     def download_shopping_cart(self, request):
+        """Скачивает список покупок пользователя в формате CSV.
+
+        Список содержит все ингредиенты из рецептов в корзине покупок,
+        сгруппированные по названию и суммированные по количеству.
+        """
         user = request.user
         cache_key = f"shopping_cart_{user.id}"
         cached_data = cache.get(cache_key)
@@ -201,6 +225,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["get"], url_path="get-link")
     def get_link(self, request, pk=None):
+        """Генерирует короткую ссылку для рецепта."""
         recipe = self.get_object()
         hash_input = f"{recipe.id}{recipe.name}{recipe.created_at}"
         url_hash = self.generate_hash(hash_input)
@@ -213,7 +238,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return Response({"short-link": short_url})
 
     def generate_hash(self, input_str):
-        """Генерация 8-символьного хэша"""
+        """Генерирует 8-символьный хэш из входной строки.
+
+        Использует SHA256 для создания
+        хэша и кодирует его в base64.
+        """
         # Создание хэша в формате SHA256
         hash_bytes = hashlib.sha256(input_str.encode()).digest()
         # Кодируем в base64 и берем первые 8 символов

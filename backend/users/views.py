@@ -19,6 +19,11 @@ from recipes.models import (
 
 
 class FollowViewSet(UserViewSet):
+    """ViewSet для работы с подписками пользователей.
+    
+    Предоставляет функционал для подписки на авторов, просмотра подписок
+    и управления аватаром пользователя.
+    """
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = (IsAuthenticatedOrReadOnly,)
@@ -31,6 +36,7 @@ class FollowViewSet(UserViewSet):
         url_path="subscribe",
     )
     def subscribe(self, request, id=None):
+        """Добавляет или удаляет подписку на автора."""
         user = request.user
         author = get_object_or_404(User, id=id)
 
@@ -71,6 +77,7 @@ class FollowViewSet(UserViewSet):
         url_path="subscriptions",
     )
     def subscriptions(self, request):
+        """Возвращает список авторов, на которых подписан пользователь."""
         user = request.user
         queryset = User.objects.filter(following__user=user).prefetch_related(
             "recipes")
@@ -87,6 +94,7 @@ class FollowViewSet(UserViewSet):
     @action(detail=False, methods=["get"], permission_classes=[
         IsAuthenticated])
     def me(self, request):
+        """Возвращает информацию о текущем пользователе."""
         serializer = UserSerializer(request.user, context={"request": request})
         return Response(serializer.data)
 
@@ -97,6 +105,12 @@ class FollowViewSet(UserViewSet):
         url_path="me/avatar",
     )
     def avatar(self, request):
+        """Управляет аватаром пользователя.
+        
+        GET - возвращает текущий аватар
+        PUT/PATCH - обновляет аватар
+        DELETE - удаляет аватар
+        """
         user = request.user
         if request.method == "GET":
             serializer = UserSerializer(user, context={"request": request})

@@ -7,7 +7,7 @@ volumes:
 
 services:
   db:
-    container_name: foodgram-db
+    container_name: pingbin74-db
     image: postgres:15.1
     env_file:
       - .env
@@ -16,7 +16,7 @@ services:
     restart: always
   
   backend:
-    container_name: foodgram-backend
+    container_name: pingbin74-backend
     build: ../backend
     ports:
       - "8000:8000"
@@ -34,13 +34,13 @@ services:
              gunicorn foodgram.wsgi:application --bind 0.0.0.0:8000"
 
   frontend:
-    container_name: foodgram-front
+    container_name: pingbin74-front
     build: ../frontend
     depends_on:
       - backend
 
   nginx:
-    container_name: foodgram-proxy
+    container_name: pingbin74-proxy
     image: nginx:1.25.4-alpine
     ports:
       - "80:80"

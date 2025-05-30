@@ -8,7 +8,7 @@ from const.errors import ERROR_MESSAGES
 ALLOWED_IMAGE_FORMATS = ["jpeg", "jpg", "png", "gif"]
 
 
-class Base64ImageField(serializers.ImageField):
+class ImageField(serializers.ImageField):
     """Поле для кодирования/декодирования изображения Base64"""
 
     def to_internal_value(self, data):

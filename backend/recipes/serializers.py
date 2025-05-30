@@ -1,6 +1,6 @@
 from rest_framework import serializers, status
 
-from const.photo import Base64ImageField
+from const.photo import ImageField
 from users.serializers import UserSerializer
 from const.errors import ERROR_MESSAGES
 from ingredient.serializers import (
@@ -18,7 +18,7 @@ from recipes.models import (
 
 
 class RecipeSerializer(serializers.ModelSerializer):
-    image = Base64ImageField()
+    image = ImageField()
     author = UserSerializer(read_only=True)
     ingredients = CreateIngredientSerializer(many=True, write_only=True)
     cooking_time = serializers.IntegerField(min_value=1)
@@ -146,7 +146,7 @@ class RecipeSerializer(serializers.ModelSerializer):
 
 
 class AddFavorite(serializers.ModelSerializer):
-    image = Base64ImageField()
+    image = ImageField()
 
     class Meta:
         model = Recipe
@@ -154,7 +154,7 @@ class AddFavorite(serializers.ModelSerializer):
 
 
 class AddAvatar(serializers.ModelSerializer):
-    avatar = Base64ImageField(required=True)
+    avatar = ImageField(required=True)
 
     class Meta:
         model = User
@@ -162,7 +162,7 @@ class AddAvatar(serializers.ModelSerializer):
 
 
 class ShortRecipeSerializer(serializers.ModelSerializer):
-    image = Base64ImageField()
+    image = ImageField()
 
     class Meta:
         model = Recipe

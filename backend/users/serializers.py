@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from const.photo import Base64ImageField
+from const.photo import ImageField
 from recipes.models import (
     Follow,
     User,
@@ -9,7 +9,7 @@ from recipes.models import (
 
 class UserSerializer(serializers.ModelSerializer):
     is_subscribed = serializers.SerializerMethodField()
-    avatar = Base64ImageField(required=False)
+    avatar = ImageField(required=False)
 
     class Meta:
         model = User

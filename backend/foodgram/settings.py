@@ -62,6 +62,7 @@ LOCAL_APPS = [
     "recipes.apps.RecipesConfig",
     "users.apps.UsersConfig",
     "const.apps.ConstConfig",
+    "ingredient.apps.IngredientConfig",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

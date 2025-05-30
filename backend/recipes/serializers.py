@@ -3,14 +3,14 @@ import binascii
 from django.core.files.base import ContentFile
 from rest_framework import serializers, status
 
+from users.serializers import UserSerializer
 from const.errors import ERROR_MESSAGES
-from .ingredient_serializers import (
-    RecipeIngredientCreateSerializer,
-    RecipeIngredientSerializer,
+from ingredient.serializers import (
+    CreateIngredientSerializer,
+    IngredientSerializer,
 )
 from recipes.models import (
     Favorite,
-    Follow,
     Ingredient,
     Recipe,
     RecipeIngredient,
@@ -19,6 +19,7 @@ from recipes.models import (
 )
 
 ALLOWED_IMAGE_FORMATS = ["jpeg", "jpg", "png", "gif"]
+
 
 class Base64ImageField(serializers.ImageField):
     """Поле для кодирования/декодирования изображения Base64"""
@@ -54,35 +55,10 @@ class Base64ImageField(serializers.ImageField):
             raise serializers.ValidationError(str(e))
 
 
-class UserSerializer(serializers.ModelSerializer):
-    is_subscribed = serializers.SerializerMethodField()
-    avatar = Base64ImageField(required=False)
-
-    class Meta:
-        model = User
-        fields = (
-            "id",
-            "first_name",
-            "last_name",
-            "email",
-            "username",
-            "is_subscribed",
-            "avatar",
-        )
-
-    def get_is_subscribed(self, obj):
-        request = self.context.get("request")
-        if not request or not request.user.is_authenticated:
-            return False
-        return Follow.objects.filter(user=request.user, author=obj).exists()
-
-
 class RecipeSerializer(serializers.ModelSerializer):
     image = Base64ImageField()
     author = UserSerializer(read_only=True)
-    ingredients = RecipeIngredientCreateSerializer(
-        many=True, write_only=True
-    )
+    ingredients = CreateIngredientSerializer(many=True, write_only=True)
     cooking_time = serializers.IntegerField(min_value=1)
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
@@ -184,7 +160,7 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        representation["ingredients"] = RecipeIngredientSerializer(
+        representation["ingredients"] = IngredientSerializer(
             instance.ingredients_items.all(), many=True
         ).data
         return representation
@@ -252,9 +228,7 @@ class FollowSerializer(UserSerializer):
         if recipes_limit and recipes_limit.isdigit():
             recipes = recipes[: int(recipes_limit)]
 
-        return ShortRecipeSerializer(
-            recipes, many=True, context=self.context
-        ).data
+        return ShortRecipeSerializer(recipes, many=True, context=self.context).data
 
     def get_recipes_count(self, obj):
         return obj.recipes.count()

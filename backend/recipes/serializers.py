@@ -159,15 +159,21 @@ class RecipeSerializer(serializers.ModelSerializer):
 
         if ingredients_data is not None:
             instance.ingredients_items.all().delete()
-            recipe_ingredients = [
-                RecipeIngredient(
-                    recipe=instance,
-                    ingredient=Ingredient.objects.get(id=ingredient_data["id"]),
-                    amount=ingredient_data["amount"],
+            try:
+                recipe_ingredients = [
+                    RecipeIngredient(
+                        recipe=instance,
+                        ingredient=Ingredient.objects.get(id=ingredient_data["id"]),
+                        amount=ingredient_data["amount"],
+                    )
+                    for ingredient_data in ingredients_data
+                ]
+                RecipeIngredient.objects.bulk_create(recipe_ingredients)
+            except Ingredient.DoesNotExist:
+                raise serializers.ValidationError(
+                    {"errors": "Один или несколько ингредиентов не существуют"},
+                    code=status.HTTP_400_BAD_REQUEST,
                 )
-                for ingredient_data in ingredients_data
-            ]
-            RecipeIngredient.objects.bulk_create(recipe_ingredients)
         return instance
 
     def to_representation(self, instance):

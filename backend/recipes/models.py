@@ -71,7 +71,9 @@ class RecipeIngredient(models.Model):
     )
     amount = models.PositiveSmallIntegerField(
         verbose_name="Количество",
-        validators=[MinValueValidator(1, message="Количество не может быть менее 1")],
+        validators=[MinValueValidator(
+            1,
+            message="Количество не может быть менее 1")],
     )
 
     class Meta:
@@ -89,14 +91,16 @@ class Favorite(models.Model):
     user = models.ForeignKey(
         User, verbose_name="Пользователь", on_delete=models.CASCADE
     )
-    recipe = models.ForeignKey(Recipe, verbose_name="Рецепты", on_delete=models.CASCADE)
+    recipe = models.ForeignKey(Recipe, verbose_name="Рецепты",
+                               on_delete=models.CASCADE)
 
     class Meta:
         verbose_name = "Избранное"
         verbose_name_plural = "Избранные"
         constraints = [
             models.UniqueConstraint(
-                fields=["user", "recipe"], name="unique_user_recipe_in_favorites"
+                fields=["user", "recipe"],
+                name="unique_user_recipe_in_favorites"
             )
         ]
 
@@ -108,14 +112,16 @@ class ShoppingCart(models.Model):
     user = models.ForeignKey(
         User, verbose_name="Пользователь", on_delete=models.CASCADE
     )
-    recipe = models.ForeignKey(Recipe, verbose_name="Рецепт", on_delete=models.CASCADE)
+    recipe = models.ForeignKey(Recipe, verbose_name="Рецепт",
+                               on_delete=models.CASCADE)
 
     class Meta:
         verbose_name = "Корзина покупок"
         verbose_name_plural = "Корзины покупок"
         constraints = [
             models.UniqueConstraint(
-                fields=["user", "recipe"], name="unique_user_recipe_in_shopping_cart"
+                fields=["user", "recipe"],
+                name="unique_user_recipe_in_shopping_cart"
             )
         ]
 
@@ -142,10 +148,12 @@ class Follow(models.Model):
         verbose_name_plural = "Подписки"
         constraints = [
             models.UniqueConstraint(
-                fields=["user", "author"], name="unique_user_author_subscription"
+                fields=["user", "author"],
+                name="unique_user_author_subscription"
             ),
             models.CheckConstraint(
-                check=~models.Q(user=models.F("author")), name="prevent_self_follow"
+                check=~models.Q(user=models.F("author")),
+                name="prevent_self_follow"
             ),
         ]
 
@@ -154,7 +162,8 @@ class Follow(models.Model):
 
 
 class RecipeShortLink(models.Model):
-    recipe = models.ForeignKey(Recipe, verbose_name="Рецепт", on_delete=models.CASCADE)
+    recipe = models.ForeignKey(Recipe, verbose_name="Рецепт", on_delete=models.
+                               CASCADE)
     url_hash = models.CharField(
         verbose_name="Хэш", max_length=10, unique=True, db_index=True
     )

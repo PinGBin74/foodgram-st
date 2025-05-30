@@ -62,7 +62,8 @@ class RecipeSerializer(serializers.ModelSerializer):
         ingredient_ids = []
         for ingredient in value:
             if ingredient["id"] in ingredient_ids:
-                raise serializers.ValidationError("Ингредиенты не должны повторяться")
+                raise serializers.ValidationError(
+                    "Ингредиенты не должны повторяться")
             ingredient_ids.append(ingredient["id"])
 
         return value
@@ -75,7 +76,8 @@ class RecipeSerializer(serializers.ModelSerializer):
             recipe_ingredients = [
                 RecipeIngredient(
                     recipe=recipe,
-                    ingredient=Ingredient.objects.get(id=ingredient_data["id"]),
+                    ingredient=Ingredient.objects.
+                    get(id=ingredient_data["id"]),
                     amount=ingredient_data["amount"],
                 )
                 for ingredient_data in ingredients_data
@@ -107,7 +109,8 @@ class RecipeSerializer(serializers.ModelSerializer):
                 recipe_ingredients = [
                     RecipeIngredient(
                         recipe=instance,
-                        ingredient=Ingredient.objects.get(id=ingredient_data["id"]),
+                        ingredient=Ingredient.objects.get(
+                            id=ingredient_data["id"]),
                         amount=ingredient_data["amount"],
                     )
                     for ingredient_data in ingredients_data
@@ -115,7 +118,8 @@ class RecipeSerializer(serializers.ModelSerializer):
                 RecipeIngredient.objects.bulk_create(recipe_ingredients)
             except Ingredient.DoesNotExist:
                 raise serializers.ValidationError(
-                    {"errors": ("Один или несколько ингредиентов не существуют")},
+                    {"errors":
+                     ("Один или несколько ингредиентов не существуют")},
                     code=status.HTTP_400_BAD_REQUEST,
                 )
         return instance
@@ -137,7 +141,8 @@ class RecipeSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         if not request or not request.user.is_authenticated:
             return False
-        return ShoppingCart.objects.filter(user=request.user, recipe=obj).exists()
+        return ShoppingCart.objects.filter(user=request.user,
+                                           recipe=obj).exists()
 
 
 class AddFavorite(serializers.ModelSerializer):

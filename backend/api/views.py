@@ -41,4 +41,5 @@ def redirect_by_hash(request, url_hash):
         return redirect(f"{settings.BASE_URL}/api/recipes/{recipe_id}")
     except Exception as e:
         logger.error(f"Error redirecting hash {url_hash}: {str(e)}")
-        return Response({"error": "Рецепт не найден"}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"error": "Рецепт не найден"},
+                        status=status.HTTP_404_NOT_FOUND)

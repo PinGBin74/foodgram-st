@@ -33,7 +33,8 @@ class FollowSerializer(UserSerializer):
         if recipes_limit and recipes_limit.isdigit():
             recipes = recipes[: int(recipes_limit)]
 
-        return ShortRecipeSerializer(recipes, many=True, context=self.context).data
+        return ShortRecipeSerializer(
+            recipes, many=True, context=self.context).data
 
     def get_recipes_count(self, obj):
         return obj.recipes.count()

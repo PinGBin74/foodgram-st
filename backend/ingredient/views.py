@@ -1,7 +1,8 @@
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
+from rest_framework.permissions import (IsAuthenticated,
+                                        IsAuthenticatedOrReadOnly)
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.exceptions import PermissionDenied
 from django.http import HttpResponse
@@ -63,7 +64,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         filters = {}
         if self.request.user.is_authenticated:
             author = self.request.query_params.get("author")
-            is_in_shopping_cart = self.request.query_params.get("is_in_shopping_cart")
+            is_in_shopping_cart = self.request.query_params.get(
+                "is_in_shopping_cart")
             is_favorited = self.request.query_params.get("is_favorited")
 
             if author:
@@ -105,7 +107,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return Response(status=status.HTTP_204_NO_CONTENT)
 
         return Response(
-            {"error": "Метод не разрешен"}, status=status.HTTP_405_METHOD_NOT_ALLOWED
+            {"error": "Метод не разрешен"}, status=status.
+            HTTP_405_METHOD_NOT_ALLOWED
         )
 
     @action(
@@ -129,7 +132,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         if request.method == "DELETE":
-            shopping_cart = ShoppingCart.objects.filter(recipe=recipe, user=user)
+            shopping_cart = ShoppingCart.objects.filter(recipe=recipe,
+                                                        user=user)
             if not shopping_cart.exists():
                 return Response(
                     {"errors": ERRORS["not_in_cart"]},
@@ -139,7 +143,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return Response(status=status.HTTP_204_NO_CONTENT)
 
         return Response(
-            {"error": "Метод не разрешен"}, status=status.HTTP_405_METHOD_NOT_ALLOWED
+            {"error": "Метод не разрешен"}, status=status.
+            HTTP_405_METHOD_NOT_ALLOWED
         )
 
     @action(
@@ -155,7 +160,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
         if cached_data:
             response = HttpResponse(cached_data, content_type="text/csv")
-            response["Content-Disposition"] = 'attachment; filename="shopping_list.txt"'
+            response["Content-Disposition"] = (
+                'attachment; filename="shopping_list.txt"'
+            )
             response.status_code = status.HTTP_200_OK
             return response
 
@@ -186,7 +193,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
         cache.set(cache_key, content, 300)  # кэшируем на 5 минут
 
         response = HttpResponse(content, content_type="text/csv")
-        response["Content-Disposition"] = 'attachment; filename="shopping_list.txt"'
+        response["Content-Disposition"] = (
+            'attachment; filename="shopping_list.txt"'
+        )
         response.status_code = status.HTTP_200_OK
         return response
 

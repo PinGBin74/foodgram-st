@@ -16,7 +16,8 @@ class Base64ImageField(serializers.ImageField):
             if isinstance(data, str) and data.startswith("data:image"):
                 parts = data.split(";base64,")
                 if len(parts) != 2:
-                    raise serializers.ValidationError(ERROR_MESSAGES["invalid_base64"])
+                    raise serializers.ValidationError(
+                        ERROR_MESSAGES["invalid_base64"])
 
                 format_part = parts[0]
                 imgstr = parts[1]

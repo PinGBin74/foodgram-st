@@ -27,8 +27,7 @@ AUTH_USER_MODEL = "users.User"
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv(
-    "SECRET_KEY",
-    "django-insecure-tmi2ldqsbn^8zeg8$gziawo0t2@)9895aki^_!dw)hkpuceeh&"
+    "SECRET_KEY", "django-insecure-tmi2ldqsbn^8zeg8$gziawo0t2@)9895aki^_!dw)hkpuceeh&"
 )
 
 # SECURITY WARNING: don't run with debug turned on in production!
@@ -62,6 +61,7 @@ LOCAL_APPS = [
     "api.apps.ApiConfig",
     "recipes.apps.RecipesConfig",
     "users.apps.UsersConfig",
+    "const.apps.ConstConfig",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

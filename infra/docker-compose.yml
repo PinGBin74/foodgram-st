@@ -28,13 +28,16 @@ services:
       - static:/app/static
       - media:/app/media
     restart: always
+    entrypoint: >
+      sh -c "python manage.py migrate &&
+             python manage.py load_ingredients &&
+             gunicorn foodgram.wsgi:application --bind 0.0.0.0:8000"
 
   frontend:
     container_name: foodgram-front
     build: ../frontend
     depends_on:
       - backend
-    restart: always
 
   nginx:
     container_name: foodgram-proxy

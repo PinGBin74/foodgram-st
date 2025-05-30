@@ -24,5 +24,5 @@ from api.views import redirect_by_hash
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("a/r/<str:url_hash>/", redirect_by_hash, name="recipe_short_link"),
-    path("api/", include("api.urls")),
+    path("api/", include("api.urls", namespace="api")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

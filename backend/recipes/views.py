@@ -33,6 +33,7 @@ from recipes.models import (
 
 class RecipeViewSet(viewsets.ModelViewSet):
     """ViewSet для работы с рецептами.
+
     Предоставляет CRUD операции для рецептов, а также дополнительные действия
     для работы с избранным, списком покупок и генерации коротких ссылок.
     """
@@ -172,6 +173,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     )
     def download_shopping_cart(self, request):
         """Скачивает список покупок пользователя в формате CSV.
+
         Список содержит все ингредиенты из рецептов в корзине покупок,
         сгруппированные по названию и суммированные по количеству.
         """
@@ -236,6 +238,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     def generate_hash(self, input_str):
         """Генерирует 8-символьный хэш из входной строки.
+
         Использует SHA256 для создания хэша и кодирует его в base64.
         """
         # Создание хэша в формате SHA256

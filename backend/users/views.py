@@ -20,7 +20,7 @@ from recipes.models import (
 
 class FollowViewSet(UserViewSet):
     """ViewSet для работы с подписками пользователей.
-    
+
     Предоставляет функционал для подписки на авторов, просмотра подписок
     и управления аватаром пользователя.
     """
@@ -106,7 +106,7 @@ class FollowViewSet(UserViewSet):
     )
     def avatar(self, request):
         """Управляет аватаром пользователя.
-        
+
         GET - возвращает текущий аватар
         PUT/PATCH - обновляет аватар
         DELETE - удаляет аватар

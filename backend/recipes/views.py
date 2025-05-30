@@ -155,11 +155,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
         if cached_data:
             response = HttpResponse(cached_data, content_type="text/csv")
-            response[
-                "Content-Disposition"
-            ] = """
-                attachment; filename="shopping_list.txt"
-            """
+            response["Content-Disposition"] = 'attachment; filename="shopping_list.txt"'
+            response.status_code = status.HTTP_200_OK
             return response
 
         ingredients = (
@@ -189,11 +186,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         cache.set(cache_key, content, 300)  # кэшируем на 5 минут
 
         response = HttpResponse(content, content_type="text/csv")
-        response[
-            "Content-Disposition"
-        ] = """
-            attachment; filename="shopping_list.txt"
-        """
+        response["Content-Disposition"] = 'attachment; filename="shopping_list.txt"'
+        response.status_code = status.HTTP_200_OK
         return response
 
     @action(detail=True, methods=["get"], url_path="get-link")

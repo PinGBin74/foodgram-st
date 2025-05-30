@@ -133,16 +133,22 @@ class RecipeSerializer(serializers.ModelSerializer):
         ingredients_data = validated_data.pop("ingredients")
         recipe = Recipe.objects.create(**validated_data)
 
-        recipe_ingredients = [
-            RecipeIngredient(
-                recipe=recipe,
-                ingredient=Ingredient.objects.get(id=ingredient_data["id"]),
-                amount=ingredient_data["amount"],
+        try:
+            recipe_ingredients = [
+                RecipeIngredient(
+                    recipe=recipe,
+                    ingredient=Ingredient.objects.get(id=ingredient_data["id"]),
+                    amount=ingredient_data["amount"],
+                )
+                for ingredient_data in ingredients_data
+            ]
+            RecipeIngredient.objects.bulk_create(recipe_ingredients)
+        except Ingredient.DoesNotExist:
+            recipe.delete()  # Rollback the recipe creation
+            raise serializers.ValidationError(
+                {"errors": "Один или несколько ингредиентов не существуют"},
+                code=status.HTTP_400_BAD_REQUEST,
             )
-            for ingredient_data in ingredients_data
-        ]
-
-        RecipeIngredient.objects.bulk_create(recipe_ingredients)
         return recipe
 
     def update(self, instance, validated_data):

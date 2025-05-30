@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
-from foodgram.validators import AllowedCharactersUsernameValidator
+from foodgram.validators import UsernameValidator
 
 
 class User(AbstractUser):
@@ -15,7 +15,7 @@ class User(AbstractUser):
         verbose_name="Имя пользователя",
         max_length=150,
         unique=True,
-        validators=[AllowedCharactersUsernameValidator()],
+        validators=[UsernameValidator()],
     )
     avatar = models.ImageField(verbose_name="Фото профиля", upload_to="avatar_photos/")
 

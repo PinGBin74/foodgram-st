@@ -19,6 +19,28 @@ Foodgram - это социальная сеть для обмена рецепт
 - Docker
 - Nginx
 
+## Структура проекта
+
+```
+foodgram/
+├── backend/               # Django backend приложение
+│   ├── api/              # API endpoints и сериализаторы
+│   ├── ingredient/       # Модели и логика для ингредиентов
+│   ├── recipes/          # Модели и логика для рецептов
+│   ├── users/            # Модели и логика для пользователей
+│   ├── foodgram/         # Основные настройки Django проекта
+│   ├── const/            # Константы и утилиты
+│   ├── data/             # Данные для загрузки (ингредиенты)
+│   ├── manage.py         # Django management script
+│   └── requirements.txt  # Зависимости Python
+├── frontend/             # React frontend приложение
+├── infra/               # Docker и Nginx конфигурации
+├── docs/                # Документация и скриншоты
+│   └── screenshots/     # Скриншоты приложения
+├── postman_collection/  # Postman коллекция для тестирования API
+└── .github/             # GitHub Actions конфигурации
+```
+
 ## Основные функции
 
 - Регистрация и авторизация пользователей
@@ -60,8 +82,8 @@ cd fronend
 
 4. Выполнить две команды:
 ```bash
-npm install
-npm start build
+npm install --legacy-peer-deps
+npm run build
 ```
 
 5. Запустите проект с помощью Docker Compose:
@@ -70,10 +92,6 @@ npm start build
 cd .. && cd infra && docker-compose up --build
 ```
 
-6. Загрузить ингредиенты.
-```bash
-docker-compose exec backend python manage.py load_ingredients
-```
 
 После этого проект будет доступен по адресу http://localhost/
 
@@ -108,26 +126,4 @@ API документация доступна по адресу http://localhost
 ### Экспорт списка покупок
 ![Экспорт списка покупок](docs/screenshots/csv_file.png)
 Пример экспортированного списка покупок в формате CSV.
-
-## Структура проекта
-
-```
-foodgram/
-├── backend/               # Django backend приложение
-│   ├── api/              # API endpoints и сериализаторы
-│   ├── ingredient/       # Модели и логика для ингредиентов
-│   ├── recipes/          # Модели и логика для рецептов
-│   ├── users/            # Модели и логика для пользователей
-│   ├── foodgram/         # Основные настройки Django проекта
-│   ├── const/            # Константы и утилиты
-│   ├── data/             # Данные для загрузки (ингредиенты)
-│   ├── manage.py         # Django management script
-│   └── requirements.txt  # Зависимости Python
-├── frontend/             # React frontend приложение
-├── infra/               # Docker и Nginx конфигурации
-├── docs/                # Документация и скриншоты
-│   └── screenshots/     # Скриншоты приложения
-├── postman_collection/  # Postman коллекция для тестирования API
-└── .github/             # GitHub Actions конфигурации
-```
 

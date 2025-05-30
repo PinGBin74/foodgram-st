@@ -106,7 +106,6 @@ WSGI_APPLICATION = "foodgram.wsgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-"""
 DATABASES = {
     "default": {
         "ENGINE": os.getenv("DB_ENGINE", "django.db.backends.postgresql"),
@@ -118,12 +117,18 @@ DATABASES = {
     }
 }
 """
+DataBase Sqlite for pytest
+"""
+
+
+"""
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+"""
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -166,7 +171,7 @@ STATIC_ROOT = BASE_DIR / "static"
 STATICFILES_DIRS = []
 
 MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_ROOT = BASE_DIR.parent / "docs" / "media"
 
 # Отключаем ManifestStaticFilesStorage для отладки проблем со статикой
 STATICFILES_STORAGE = "django.contrib.staticfiles.storage.StaticFilesStorage"

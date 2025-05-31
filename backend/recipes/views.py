@@ -10,13 +10,29 @@ from django.shortcuts import get_object_or_404
 from django.db.models import Sum
 from django.conf import settings
 from django.core.cache import cache
-import csv
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
 import io
 import hashlib
 import base64
 import logging
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+import os
 
 from const.errors import ERRORS
+from const.const import (
+    PDF_TITLE,
+    PDF_FILENAME,
+    PDF_CACHE_TIME,
+    PDF_COLUMN_WIDTHS,
+    PDF_HEADER_FONT_SIZE,
+    PDF_BODY_FONT_SIZE,
+    PDF_TITLE_FONT_SIZE,
+)
 
 
 from .serializers import (
@@ -178,23 +194,33 @@ class RecipeViewSet(viewsets.ModelViewSet):
         url_path="download_shopping_cart",
     )
     def download_shopping_cart(self, request):
-        """Скачивает список покупок пользователя в формате CSV.
+        """Скачивает список покупок пользователя в формате PDF.
 
         Список содержит все ингредиенты из рецептов в корзине покупок,
         сгруппированные по названию и суммированные по количеству.
         """
         user = request.user
-        cache_key = f"shopping_cart_{user.id}"
+        cache_key = f"shopping_cart_pdf_{user.id}"
         cached_data = cache.get(cache_key)
 
         if cached_data:
-            response = HttpResponse(cached_data, content_type="text/csv")
+            response = HttpResponse(
+                cached_data,
+                content_type="application/pdf"
+            )
             response["Content-Disposition"] = (
-                'attachment; filename="shopping_list.txt"'
+                f'attachment; filename="{PDF_FILENAME}"'
             )
             return response
 
         try:
+            # Регистрируем шрифт DejaVuSans
+            font_path = os.path.join(
+                os.path.dirname(os.path.dirname(__file__)),
+                'const', 'fonts', 'DejaVuSans.ttf'
+            )
+            pdfmetrics.registerFont(TTFont('DejaVuSans', font_path))
+
             ingredients = (
                 RecipeIngredient.objects.filter(
                     recipe__shoppingcart__user=user)
@@ -209,31 +235,63 @@ class RecipeViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            buffer = io.StringIO()
-            writer = csv.writer(buffer, delimiter="\t")
-            writer.writerow(["Список покупок"])
-            writer.writerow(["Ингредиенты", "Количество", "Ед. измерения"])
+            buffer = io.BytesIO()
+            doc = SimpleDocTemplate(buffer, pagesize=letter)
+            styles = getSampleStyleSheet()
+            elements = []
 
+            # Заголовок с поддержкой кириллицы
+            title_style = ParagraphStyle(
+                'CustomTitle',
+                parent=styles['Heading1'],
+                fontName='DejaVuSans',
+                fontSize=PDF_TITLE_FONT_SIZE,
+                spaceAfter=30
+            )
+            elements.append(Paragraph(PDF_TITLE, title_style))
+
+            # Данные для таблицы
+            data = [["Ингредиент", "Количество", "Ед. измерения"]]
             for item in ingredients:
-                writer.writerow([
+                data.append([
                     item["ingredient__name"],
-                    item["total_amount"],
+                    str(item["total_amount"]),
                     item["ingredient__measurement_unit"],
                 ])
 
-            content = buffer.getvalue()
+            col_widths = [width * inch for width in PDF_COLUMN_WIDTHS]
+            table = Table(data, colWidths=col_widths)
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'DejaVuSans'),
+                ('FONTSIZE', (0, 0), (-1, 0), PDF_HEADER_FONT_SIZE),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+                ('FONTNAME', (0, 1), (-1, -1), 'DejaVuSans'),
+                ('FONTSIZE', (0, 1), (-1, -1), PDF_BODY_FONT_SIZE),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ]))
+            elements.append(table)
+
+            doc.build(elements)
+            pdf = buffer.getvalue()
             buffer.close()
 
-            cache.set(cache_key, content, 300)  # кэшируем на 5 минут
+            cache.set(cache_key, pdf, PDF_CACHE_TIME)
 
-            response = HttpResponse(content, content_type="text/csv")
+            response = HttpResponse(pdf, content_type="application/pdf")
             response["Content-Disposition"] = (
-                'attachment; filename="shopping_list.txt"'
+                f'attachment; filename="{PDF_FILENAME}"'
             )
             return response
 
         except Exception as e:
-            logger.error(f"Error generating shopping cart: {str(e)}")
+            logger.error(f"Error generating shopping cart PDF: {str(e)}")
             return Response(
                 {"error": "Ошибка при формировании списка покупок"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR

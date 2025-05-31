@@ -17,8 +17,7 @@ class User(AbstractUser):
         unique=True,
         validators=[UsernameValidator()],
     )
-    avatar = models.ImageField(verbose_name="Фото профиля",
-                               upload_to="avatar_photos/")
+    avatar = models.ImageField(verbose_name="Фото профиля", upload_to="avatar_photos/")
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["first_name", "last_name", "username"]

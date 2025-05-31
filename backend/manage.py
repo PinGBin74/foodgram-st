@@ -8,8 +8,7 @@ def main():
     """Run administrative tasks."""
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "foodgram.settings")
     # Add the backend directory to the Python path
-    sys.path.append(os.path.dirname(os.path.dirname(os.
-                                                    path.abspath(__file__))))
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:

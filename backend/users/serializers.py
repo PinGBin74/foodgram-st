@@ -10,6 +10,10 @@ from recipes.models import (
 class UserSerializer(serializers.ModelSerializer):
     is_subscribed = serializers.SerializerMethodField()
     avatar = ImageField(required=False)
+    first_name = serializers.CharField(required=True)
+    last_name = serializers.CharField(required=True)
+    email = serializers.EmailField(required=True)
+    username = serializers.CharField(required=True)
 
     class Meta:
         model = User
@@ -22,6 +26,7 @@ class UserSerializer(serializers.ModelSerializer):
             "is_subscribed",
             "avatar",
         )
+        read_only_fields = ("id",)
 
     def get_is_subscribed(self, obj):
         request = self.context.get("request")

@@ -11,9 +11,6 @@ class Command(BaseCommand):
             data = json.load(file)
             for item in data:
                 Ingredient.objects.get_or_create(
-                    name=item["name"],
-                    measurement_unit=item["measurement_unit"]
+                    name=item["name"], measurement_unit=item["measurement_unit"]
                 )
-        self.stdout.write(
-            self.style.SUCCESS("Successfully loaded ingredients")
-        )
+        self.stdout.write(self.style.SUCCESS("Successfully loaded ingredients"))

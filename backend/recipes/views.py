@@ -10,11 +10,11 @@ from django.shortcuts import get_object_or_404
 from django.db.models import Sum
 from django.conf import settings
 from django.core.cache import cache
+from django.db import transaction
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
 import io
 import hashlib
 import base64
@@ -57,28 +57,69 @@ class RecipeViewSet(viewsets.ModelViewSet):
     Предоставляет CRUD операции для рецептов, а также дополнительные действия
     для работы с избранным, списком покупок и генерации коротких ссылок.
     """
+
     queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
     permission_classes = (IsAuthenticatedOrReadOnly,)
     pagination_class = LimitOffsetPagination
 
+    def get_queryset(self):
+        """Возвращает отфильтрованный
+          список рецептов с оптимизированными запросами."""
+        queryset = Recipe.objects.select_related("author").prefetch_related(
+            "ingredients"
+        )
+
+        if not self.request.user.is_authenticated:
+            return queryset
+
+        author = self.request.query_params.get("author")
+        is_in_cart = self.request.query_params.get("is_in_shopping_cart")
+        is_favorited = self.request.query_params.get("is_favorited")
+
+        if author:
+            queryset = queryset.filter(author_id=author)
+        if is_in_cart == "1":
+            queryset = queryset.filter(shoppingcart__user=self.
+                                       request.user).distinct()
+        if is_favorited == "1":
+            queryset = queryset.filter(favorite__user=self.
+                                       request.user).distinct()
+
+        return queryset
+
+    def _invalidate_recipe_caches(self):
+        """Invalidate all recipe-related caches."""
+        # Clear recipe list caches
+        cache.delete("recipes_list_")
+        # Clear individual recipe caches
+        for recipe in Recipe.objects.values_list("id", flat=True):
+            cache.delete(f"recipe_{recipe}")
+
+    @transaction.atomic
     def perform_create(self, serializer):
         """Создает новый рецепт и
-        устанавливает текущего пользователя как автора.
-        """
-        serializer.save(author=self.request.user)
+        устанавливает текущего пользователя как автора."""
+        recipe = serializer.save(author=self.request.user)
+        self._invalidate_recipe_caches()
+        return recipe
 
+    @transaction.atomic
     def perform_update(self, serializer):
         """Обновляет рецепт, проверяя права доступа автора."""
         if serializer.instance.author != self.request.user:
             raise PermissionDenied(detail=ERRORS["cant_edit"])
-        serializer.save()
+        recipe = serializer.save()
+        self._invalidate_recipe_caches()
+        return recipe
 
+    @transaction.atomic
     def perform_destroy(self, instance):
         """Удаляет рецепт, проверяя права доступа автора."""
         if instance.author != self.request.user:
             raise PermissionDenied(detail=ERRORS["cant_delete"])
         instance.delete()
+        self._invalidate_recipe_caches()
 
     def get_serializer_context(self):
         """Добавляет request в контекст
@@ -87,33 +128,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
         context = super().get_serializer_context()
         context["request"] = self.request
         return context
-
-    def get_queryset(self):
-        """Возвращает отфильтрованный список рецептов.
-        Поддерживает фильтрацию по автору,
-        наличию в избранном и списке покупок.
-        """
-        queryset = Recipe.objects.select_related("author").prefetch_related(
-            "ingredients"
-        )
-
-        if not self.request.user.is_authenticated:
-            return queryset
-
-        filters = {}
-        author = self.request.query_params.get("author")
-        is_in_shopping_cart = self.request.query_params.get(
-            "is_in_shopping_cart")
-        is_favorited = self.request.query_params.get("is_favorited")
-
-        if author:
-            filters["author_id"] = author
-        if is_in_shopping_cart:
-            filters["shoppingcart__user"] = self.request.user
-        if is_favorited:
-            filters["favorite__user"] = self.request.user
-
-        return queryset.filter(**filters).distinct()
 
     @action(
         detail=True,
@@ -125,29 +139,37 @@ class RecipeViewSet(viewsets.ModelViewSet):
         """Добавляет или удаляет рецепт из избранного пользователя."""
         recipe = get_object_or_404(Recipe, id=pk)
         user = request.user
+
         if request.method == "POST":
-            if Favorite.objects.filter(recipe=recipe, user=user).exists():
+            favorite, created = Favorite.objects.get_or_create(
+                recipe=recipe, user=user,
+                defaults={"recipe": recipe, "user": user}
+            )
+
+            if not created:
                 return Response(
                     {"error": ERRORS["already_in_favorites"]},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            Favorite.objects.create(user=user, recipe=recipe)
+
             serializer = AddFavorite(recipe)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         if request.method == "DELETE":
-            favorite = Favorite.objects.filter(recipe=recipe, user=user)
-            if not favorite.exists():
+            deleted, _ = Favorite.objects.filter(
+                recipe=recipe, user=user).delete()
+
+            if not deleted:
                 return Response(
                     {"errors": ERRORS["not_in_favorites"]},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            favorite.delete()
+
             return Response(status=status.HTTP_204_NO_CONTENT)
 
         return Response(
-            {"error": "Метод не разрешен"}, status=status.
-            HTTP_405_METHOD_NOT_ALLOWED
+            {"error": "Method not allowed"},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
         )
 
     @action(
@@ -162,29 +184,36 @@ class RecipeViewSet(viewsets.ModelViewSet):
         user = request.user
 
         if request.method == "POST":
-            if ShoppingCart.objects.filter(recipe=recipe, user=user).exists():
+            cart_item, created = ShoppingCart.objects.get_or_create(
+                recipe=recipe,
+                user=user,
+                defaults={"recipe": recipe, "user": user},
+            )
+
+            if not created:
                 return Response(
                     {"error": ERRORS["already_in_cart"]},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            ShoppingCart.objects.create(user=user, recipe=recipe)
+
             serializer = AddFavorite(recipe)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         if request.method == "DELETE":
-            shopping_cart = ShoppingCart.objects.filter(recipe=recipe,
-                                                        user=user)
-            if not shopping_cart.exists():
+            deleted, _ = ShoppingCart.objects.filter(
+                recipe=recipe, user=user).delete()
+
+            if not deleted:
                 return Response(
                     {"errors": ERRORS["not_in_cart"]},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            shopping_cart.delete()
+
             return Response(status=status.HTTP_204_NO_CONTENT)
 
         return Response(
-            {"error": "Метод не разрешен"}, status=status.
-            HTTP_405_METHOD_NOT_ALLOWED
+            {"error": "Method not allowed"},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED
         )
 
     @action(
@@ -194,19 +223,14 @@ class RecipeViewSet(viewsets.ModelViewSet):
         url_path="download_shopping_cart",
     )
     def download_shopping_cart(self, request):
-        """Скачивает список покупок пользователя в формате PDF.
-
-        Список содержит все ингредиенты из рецептов в корзине покупок,
-        сгруппированные по названию и суммированные по количеству.
-        """
+        """Скачивает список покупок пользователя в формате PDF."""
         user = request.user
         cache_key = f"shopping_cart_pdf_{user.id}"
         cached_data = cache.get(cache_key)
 
         if cached_data:
             response = HttpResponse(
-                cached_data,
-                content_type="application/pdf"
+                cached_data, content_type="application/pdf"
             )
             response["Content-Disposition"] = (
                 f'attachment; filename="{PDF_FILENAME}"'
@@ -214,16 +238,19 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return response
 
         try:
-            # Регистрируем шрифт DejaVuSans
+            # Register DejaVuSans font
             font_path = os.path.join(
                 os.path.dirname(os.path.dirname(__file__)),
-                'const', 'fonts', 'DejaVuSans.ttf'
+                "const",
+                "fonts",
+                "DejaVuSans.ttf",
             )
-            pdfmetrics.registerFont(TTFont('DejaVuSans', font_path))
+            pdfmetrics.registerFont(TTFont("DejaVuSans", font_path))
 
             ingredients = (
                 RecipeIngredient.objects.filter(
                     recipe__shoppingcart__user=user)
+                .select_related("ingredient")
                 .values("ingredient__name", "ingredient__measurement_unit")
                 .annotate(total_amount=Sum("amount"))
                 .order_by("ingredient__name")
@@ -231,8 +258,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
             if not ingredients.exists():
                 return Response(
-                    {"error": "Список покупок пуст"},
-                    status=status.HTTP_400_BAD_REQUEST
+                    {"error": "Shopping cart is empty"},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
 
             buffer = io.BytesIO()
@@ -240,90 +267,90 @@ class RecipeViewSet(viewsets.ModelViewSet):
             styles = getSampleStyleSheet()
             elements = []
 
-            # Заголовок с поддержкой кириллицы
+            # Title with Cyrillic support
             title_style = ParagraphStyle(
-                'CustomTitle',
-                parent=styles['Heading1'],
-                fontName='DejaVuSans',
+                "CustomTitle",
+                parent=styles["Heading1"],
+                fontName="DejaVuSans",
                 fontSize=PDF_TITLE_FONT_SIZE,
-                spaceAfter=30
+                spaceAfter=30,
             )
             elements.append(Paragraph(PDF_TITLE, title_style))
 
-            # Данные для таблицы
-            data = [["Ингредиент", "Количество", "Ед. измерения"]]
+            # Table data
+            data = [["Ingredient", "Amount", "Unit"]]
             for item in ingredients:
-                data.append([
-                    item["ingredient__name"],
-                    str(item["total_amount"]),
-                    item["ingredient__measurement_unit"],
-                ])
+                data.append(
+                    [
+                        item["ingredient__name"],
+                        str(item["total_amount"]),
+                        item["ingredient__measurement_unit"],
+                    ]
+                )
 
-            col_widths = [width * inch for width in PDF_COLUMN_WIDTHS]
-            table = Table(data, colWidths=col_widths)
-            table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('FONTNAME', (0, 0), (-1, 0), 'DejaVuSans'),
-                ('FONTSIZE', (0, 0), (-1, 0), PDF_HEADER_FONT_SIZE),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-                ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
-                ('FONTNAME', (0, 1), (-1, -1), 'DejaVuSans'),
-                ('FONTSIZE', (0, 1), (-1, -1), PDF_BODY_FONT_SIZE),
-                ('GRID', (0, 0), (-1, -1), 1, colors.black),
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ]))
+            # Create table
+            table = Table(data, colWidths=PDF_COLUMN_WIDTHS)
+            table.setStyle(
+                TableStyle(
+                    [
+                        ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
+                        ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                        ("FONTNAME", (0, 0), (-1, 0), "DejaVuSans"),
+                        ("FONTSIZE", (0, 0), (-1, 0), PDF_HEADER_FONT_SIZE),
+                        ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+                        ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
+                        ("TEXTCOLOR", (0, 1), (-1, -1), colors.black),
+                        ("FONTNAME", (0, 1), (-1, -1), "DejaVuSans"),
+                        ("FONTSIZE", (0, 1), (-1, -1), PDF_BODY_FONT_SIZE),
+                        ("GRID", (0, 0), (-1, -1), 1, colors.black),
+                    ]
+                )
+            )
+
             elements.append(table)
-
             doc.build(elements)
-            pdf = buffer.getvalue()
+
+            pdf_data = buffer.getvalue()
             buffer.close()
 
-            cache.set(cache_key, pdf, PDF_CACHE_TIME)
+            # Cache the PDF data
+            cache.set(cache_key, pdf_data, PDF_CACHE_TIME)
 
-            response = HttpResponse(pdf, content_type="application/pdf")
+            response = HttpResponse(pdf_data, content_type="application/pdf")
             response["Content-Disposition"] = (
                 f'attachment; filename="{PDF_FILENAME}"'
             )
             return response
 
         except Exception as e:
-            logger.error(f"Error generating shopping cart PDF: {str(e)}")
+            logger.error(f"Error generating PDF: {str(e)}")
             return Response(
-                {"error": "Ошибка при формировании списка покупок"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": "Error generating PDF"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
     @action(detail=True, methods=["get"], url_path="get-link")
     def get_link(self, request, pk=None):
         """Генерирует короткую ссылку для рецепта."""
-        recipe = self.get_object()
-        hash_input = f"{recipe.id}{recipe.name}{recipe.created_at}"
-        url_hash = self.generate_hash(hash_input)
+        recipe = get_object_or_404(Recipe, id=pk)
+        cache_key = f"recipe_short_link_{recipe.id}"
+        short_link = cache.get(cache_key)
 
-        try:
+        if not short_link:
+            url_hash = self.generate_hash(str(recipe.id))
             short_link, created = RecipeShortLink.objects.get_or_create(
                 recipe=recipe, defaults={"url_hash": url_hash}
             )
+            cache.set(cache_key, short_link, 86400)  # Cache for 24 hours
 
-            short_url = f"{settings.BASE_URL}/a/r/{short_link.url_hash}"
-            return Response({"short-link": short_url})
-        except Exception as e:
-            logger.error(f"Error generating short link: {str(e)}")
-            return Response(
-                {"error": "Ошибка при создании короткой ссылки"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        return Response({
+            "short_link": (
+                f"{settings.BASE_URL}/api/recipes/short/{short_link.url_hash}"
             )
+        })
 
     def generate_hash(self, input_str):
-        """Генерирует 8-символьный хэш из входной строки.
-
-        Использует SHA256 для создания хэша и кодирует его в base64.
-        """
-        # Создание хэша в формате SHA256
-        hash_bytes = hashlib.sha256(input_str.encode()).digest()
-        # Кодируем в base64 и берем первые 8 символов
-        return base64.urlsafe_b64encode(hash_bytes).decode()[:8]
+        """Генерирует короткий хеш для ссылки."""
+        hash_object = hashlib.md5(input_str.encode())
+        return base64.urlsafe_b64encode(hash_object.digest())[:8].decode()

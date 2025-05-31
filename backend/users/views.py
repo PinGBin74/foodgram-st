@@ -1,8 +1,7 @@
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import (IsAuthenticated,
-                                        IsAuthenticatedOrReadOnly)
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.pagination import LimitOffsetPagination
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet
@@ -24,6 +23,7 @@ class FollowViewSet(UserViewSet):
     Предоставляет функционал для подписки на авторов, просмотра подписок
     и управления аватаром пользователя.
     """
+
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = (IsAuthenticatedOrReadOnly,)
@@ -66,8 +66,7 @@ class FollowViewSet(UserViewSet):
             return Response(status=status.HTTP_204_NO_CONTENT)
 
         return Response(
-            {"error": "Метод не разрешен"}, status=status.
-            HTTP_405_METHOD_NOT_ALLOWED
+            {"error": "Метод не разрешен"}, status=status.HTTP_405_METHOD_NOT_ALLOWED
         )
 
     @action(
@@ -79,20 +78,17 @@ class FollowViewSet(UserViewSet):
     def subscriptions(self, request):
         """Возвращает список авторов, на которых подписан пользователь."""
         user = request.user
-        queryset = User.objects.filter(following__user=user).prefetch_related(
-            "recipes")
+        queryset = User.objects.filter(following__user=user).prefetch_related("recipes")
         if not queryset:
             return Response(
                 ERRORS["no_subscriptions"], status=status.HTTP_400_BAD_REQUEST
             )
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(queryset, request)
-        serializer = FollowSerializer(page, many=True, context={"request":
-                                                                request})
+        serializer = FollowSerializer(page, many=True, context={"request": request})
         return paginator.get_paginated_response(serializer.data)
 
-    @action(detail=False, methods=["get"], permission_classes=[
-        IsAuthenticated])
+    @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated])
     def me(self, request):
         """Возвращает информацию о текущем пользователе."""
         serializer = UserSerializer(request.user, context={"request": request})
@@ -119,8 +115,7 @@ class FollowViewSet(UserViewSet):
         if request.method in ["PUT", "PATCH"]:
             if "avatar" not in request.data:
                 return Response(
-                    {"errors": ERRORS["no_image"]}, status=status.
-                    HTTP_400_BAD_REQUEST
+                    {"errors": ERRORS["no_image"]}, status=status.HTTP_400_BAD_REQUEST
                 )
             serializer = AddAvatar(user, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
@@ -133,6 +128,5 @@ class FollowViewSet(UserViewSet):
             return Response(status=status.HTTP_204_NO_CONTENT)
 
         return Response(
-            {"error": "Метод не разрешен"}, status=status.
-            HTTP_405_METHOD_NOT_ALLOWED
+            {"error": "Метод не разрешен"}, status=status.HTTP_405_METHOD_NOT_ALLOWED
         )

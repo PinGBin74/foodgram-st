@@ -1,4 +1,6 @@
 from rest_framework import serializers, status
+from django.core.cache import cache
+from django.db import transaction
 
 from const.photo import ImageField
 from users.serializers import UserSerializer
@@ -58,27 +60,31 @@ class RecipeSerializer(serializers.ModelSerializer):
     def validate_ingredients(self, value):
         if not value:
             raise serializers.ValidationError(
-                "Необходимо указать хотя бы один ингредиент"
+                "At least one ingredient is required",
+                code=status.HTTP_400_BAD_REQUEST,
             )
 
         ingredient_ids = []
         for ingredient in value:
             if not isinstance(ingredient, dict):
-                raise serializers.ValidationError(
-                    "Неверный формат ингредиента"
-                )
+                raise serializers.ValidationError("Invalid ingredient format")
             if "id" not in ingredient or "amount" not in ingredient:
                 raise serializers.ValidationError(
-                    "Отсутствует id или amount в ингредиенте"
-                )
+                    "Missing id or amount in ingredient")
             if ingredient["id"] in ingredient_ids:
                 raise serializers.ValidationError(
-                    "Ингредиенты не должны повторяться"
+                    "Duplicate ingredients are not allowed"
                 )
             ingredient_ids.append(ingredient["id"])
 
         return value
 
+    def _invalidate_recipe_caches(self, recipe_id):
+        """Invalidate all caches related to a specific recipe."""
+        cache.delete(f"recipe_{recipe_id}")
+        cache.delete("recipes_list_")
+
+    @transaction.atomic
     def create(self, validated_data):
         ingredients_data = validated_data.pop("ingredients", [])
         recipe = Recipe.objects.create(**validated_data)
@@ -95,14 +101,19 @@ class RecipeSerializer(serializers.ModelSerializer):
                     )
                 )
             RecipeIngredient.objects.bulk_create(recipe_ingredients)
+
+            # Invalidate cache
+            self._invalidate_recipe_caches(recipe.id)
+
+            return recipe
         except Ingredient.DoesNotExist:
             recipe.delete()
             raise serializers.ValidationError(
-                {"errors": "Один или несколько ингредиентов не существуют"},
+                {"errors": "One or more ingredients do not exist"},
                 code=status.HTTP_400_BAD_REQUEST,
             )
-        return recipe
 
+    @transaction.atomic
     def update(self, instance, validated_data):
         ingredients_data = validated_data.pop("ingredients", None)
 
@@ -131,6 +142,10 @@ class RecipeSerializer(serializers.ModelSerializer):
                         )
                     )
                 RecipeIngredient.objects.bulk_create(recipe_ingredients)
+
+                # Invalidate cache
+                self._invalidate_recipe_caches(instance.id)
+
             except Ingredient.DoesNotExist:
                 raise serializers.ValidationError(
                     {"errors": ERROR_MESSAGES["ingredients_not_exist"]},
@@ -139,24 +154,56 @@ class RecipeSerializer(serializers.ModelSerializer):
         return instance
 
     def to_representation(self, instance):
+        cache_key = f"recipe_{instance.id}"
+        cached_data = cache.get(cache_key)
+
+        if cached_data is not None:
+            return cached_data
+
         representation = super().to_representation(instance)
         representation["ingredients"] = IngredientSerializer(
             instance.ingredients_items.all(), many=True
         ).data
+
+        # Cache for 1 hour
+        cache.set(cache_key, representation, 3600)
         return representation
 
     def get_is_favorited(self, obj):
         request = self.context.get("request")
         if not request or not request.user.is_authenticated:
             return False
-        return Favorite.objects.filter(user=request.user, recipe=obj).exists()
+
+        cache_key = f"recipe_favorite_{obj.id}_{request.user.id}"
+        cached_value = cache.get(cache_key)
+
+        if cached_value is not None:
+            return cached_value
+
+        is_favorited = Favorite.objects.filter(
+            user=request.user, recipe=obj).exists()
+
+        # Cache for 1 hour
+        cache.set(cache_key, is_favorited, 3600)
+        return is_favorited
 
     def get_is_in_shopping_cart(self, obj):
         request = self.context.get("request")
         if not request or not request.user.is_authenticated:
             return False
-        return ShoppingCart.objects.filter(user=request.user,
-                                           recipe=obj).exists()
+
+        cache_key = f"recipe_cart_{obj.id}_{request.user.id}"
+        cached_value = cache.get(cache_key)
+
+        if cached_value is not None:
+            return cached_value
+
+        is_in_cart = ShoppingCart.objects.filter(
+            user=request.user, recipe=obj).exists()
+
+        # Cache for 1 hour
+        cache.set(cache_key, is_in_cart, 3600)
+        return is_in_cart
 
 
 class AddFavorite(serializers.ModelSerializer):
@@ -177,7 +224,19 @@ class AddAvatar(serializers.ModelSerializer):
 
 class ShortRecipeSerializer(serializers.ModelSerializer):
     image = ImageField()
+    short_link = serializers.SerializerMethodField(source="get_short_link")
 
     class Meta:
         model = Recipe
-        fields = ("id", "name", "image", "cooking_time")
+        fields = ("id", "name", "image", "cooking_time", "short_link")
+
+    def get_short_link(self, obj):
+        request = self.context.get("request")
+        if not request:
+            return None
+        return request.build_absolute_uri(f"/recipes/{obj.id}")
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation["short-link"] = representation.pop("short_link")
+        return representation

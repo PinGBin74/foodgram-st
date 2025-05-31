@@ -137,8 +137,8 @@ class Api {
     return fetch(
       `/api/recipes/?page=${page}&limit=${limit}${
         author ? `&author=${author}` : ""
-      }${is_favorited ? `&is_favorited=${is_favorited}` : ""}${
-        is_in_shopping_cart ? `&is_in_shopping_cart=${is_in_shopping_cart}` : ""
+      }${is_favorited ? `&is_favorited=1` : ""}${
+        is_in_shopping_cart ? `&is_in_shopping_cart=1` : ""
       }`,
       {
         method: "GET",

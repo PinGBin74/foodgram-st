@@ -32,8 +32,7 @@ def create_users():
     users = []
     for i in range(5):
         user = User.objects.create_user(
-            username=f"user{i}", email=f"user{i}@example.com",
-            password="testpass123"
+            username=f"user{i}", email=f"user{i}@example.com", password="testpass123"
         )
         users.append(user)
     return users
@@ -100,8 +99,7 @@ def recipes(admin_user, ingredients):
             text=f"Test Description {i}",
             cooking_time=30,
         )
-        recipe.ingredients.add(ingredients[0],
-                               through_defaults={"amount": 100})
+        recipe.ingredients.add(ingredients[0], through_defaults={"amount": 100})
         recipes.append(recipe)
     return recipes
 

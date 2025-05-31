@@ -4,10 +4,12 @@ from recipes.models import (
     Ingredient,
 )
 
+from const.const import MIN_VALUE_AMOUNT
+
 
 class CreateIngredientSerializer(serializers.Serializer):
-    id = serializers.IntegerField(min_value=1)
-    amount = serializers.IntegerField(min_value=1)
+    id = serializers.IntegerField(min_value=MIN_VALUE_AMOUNT)
+    amount = serializers.IntegerField(min_value=MIN_VALUE_AMOUNT)
 
     def validate_id(self, value):
         if not Ingredient.objects.filter(id=value).exists():

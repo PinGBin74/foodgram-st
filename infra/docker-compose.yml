@@ -26,7 +26,7 @@ services:
       - db
     volumes:
       - static:/app/static
-      - media:/app/media
+      - media:/var/html/media
     restart: always
     entrypoint: >
       sh -c "python manage.py migrate &&

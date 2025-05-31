@@ -40,13 +40,15 @@ class RecipeSerializer(serializers.ModelSerializer):
         )
 
     def validate(self, data):
-        if self.context["request"].method in ["POST", "PATCH", "PUT"]:
-            if "ingredients" not in self.initial_data:
+        request = self.context.get("request")
+        if request and request.method in ["POST", "PATCH", "PUT"]:
+            ingredients = self.initial_data.get("ingredients")
+            if ingredients is None:
                 raise serializers.ValidationError(
                     {"errors": ERROR_MESSAGES["no_ingredients"]},
                     code=status.HTTP_400_BAD_REQUEST,
                 )
-            if not self.initial_data.get("ingredients"):
+            if not ingredients:
                 raise serializers.ValidationError(
                     {"errors": ERROR_MESSAGES["empty_ingredients"]},
                     code=status.HTTP_400_BAD_REQUEST,
@@ -61,30 +63,40 @@ class RecipeSerializer(serializers.ModelSerializer):
 
         ingredient_ids = []
         for ingredient in value:
+            if not isinstance(ingredient, dict):
+                raise serializers.ValidationError(
+                    "Неверный формат ингредиента"
+                )
+            if "id" not in ingredient or "amount" not in ingredient:
+                raise serializers.ValidationError(
+                    "Отсутствует id или amount в ингредиенте"
+                )
             if ingredient["id"] in ingredient_ids:
                 raise serializers.ValidationError(
-                    "Ингредиенты не должны повторяться")
+                    "Ингредиенты не должны повторяться"
+                )
             ingredient_ids.append(ingredient["id"])
 
         return value
 
     def create(self, validated_data):
-        ingredients_data = validated_data.pop("ingredients")
+        ingredients_data = validated_data.pop("ingredients", [])
         recipe = Recipe.objects.create(**validated_data)
 
         try:
-            recipe_ingredients = [
-                RecipeIngredient(
-                    recipe=recipe,
-                    ingredient=Ingredient.objects.
-                    get(id=ingredient_data["id"]),
-                    amount=ingredient_data["amount"],
+            recipe_ingredients = []
+            for ingredient_data in ingredients_data:
+                ingredient = Ingredient.objects.get(id=ingredient_data["id"])
+                recipe_ingredients.append(
+                    RecipeIngredient(
+                        recipe=recipe,
+                        ingredient=ingredient,
+                        amount=ingredient_data["amount"],
+                    )
                 )
-                for ingredient_data in ingredients_data
-            ]
             RecipeIngredient.objects.bulk_create(recipe_ingredients)
         except Ingredient.DoesNotExist:
-            recipe.delete()  # Rollback the recipe creation
+            recipe.delete()
             raise serializers.ValidationError(
                 {"errors": "Один или несколько ингредиентов не существуют"},
                 code=status.HTTP_400_BAD_REQUEST,
@@ -93,33 +105,35 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         ingredients_data = validated_data.pop("ingredients", None)
-        instance.name = validated_data.get("name", instance.name)
-        instance.text = validated_data.get("text", instance.text)
-        instance.cooking_time = validated_data.get(
-            "cooking_time", instance.cooking_time
-        )
+
+        # Update basic fields
+        for field in ["name", "text", "cooking_time"]:
+            if field in validated_data:
+                setattr(instance, field, validated_data[field])
 
         if "image" in validated_data:
-            instance.image = validated_data.get("image", instance.image)
+            instance.image = validated_data["image"]
         instance.save()
 
+        # Update ingredients if provided
         if ingredients_data is not None:
             instance.ingredients_items.all().delete()
             try:
-                recipe_ingredients = [
-                    RecipeIngredient(
-                        recipe=instance,
-                        ingredient=Ingredient.objects.get(
-                            id=ingredient_data["id"]),
-                        amount=ingredient_data["amount"],
+                recipe_ingredients = []
+                for ingredient_data in ingredients_data:
+                    ingredient = Ingredient.objects.get(
+                        id=ingredient_data["id"])
+                    recipe_ingredients.append(
+                        RecipeIngredient(
+                            recipe=instance,
+                            ingredient=ingredient,
+                            amount=ingredient_data["amount"],
+                        )
                     )
-                    for ingredient_data in ingredients_data
-                ]
                 RecipeIngredient.objects.bulk_create(recipe_ingredients)
             except Ingredient.DoesNotExist:
                 raise serializers.ValidationError(
-                    {"errors":
-                     ("Один или несколько ингредиентов не существуют")},
+                    {"errors": ERROR_MESSAGES["ingredients_not_exist"]},
                     code=status.HTTP_400_BAD_REQUEST,
                 )
         return instance

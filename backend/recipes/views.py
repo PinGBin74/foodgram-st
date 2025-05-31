@@ -14,6 +14,7 @@ import csv
 import io
 import hashlib
 import base64
+import logging
 
 from const.errors import ERRORS
 
@@ -29,6 +30,9 @@ from recipes.models import (
     RecipeIngredient,
     RecipeShortLink,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
@@ -77,19 +81,21 @@ class RecipeViewSet(viewsets.ModelViewSet):
             "ingredients"
         )
 
-        filters = {}
-        if self.request.user.is_authenticated:
-            author = self.request.query_params.get("author")
-            is_in_shopping_cart = self.request.query_params.get(
-                "is_in_shopping_cart")
-            is_favorited = self.request.query_params.get("is_favorited")
+        if not self.request.user.is_authenticated:
+            return queryset
 
-            if author:
-                filters["author_id"] = author
-            if is_in_shopping_cart:
-                filters["shoppingcart__user"] = self.request.user
-            if is_favorited:
-                filters["favorite__user"] = self.request.user
+        filters = {}
+        author = self.request.query_params.get("author")
+        is_in_shopping_cart = self.request.query_params.get(
+            "is_in_shopping_cart")
+        is_favorited = self.request.query_params.get("is_favorited")
+
+        if author:
+            filters["author_id"] = author
+        if is_in_shopping_cart:
+            filters["shoppingcart__user"] = self.request.user
+        if is_favorited:
+            filters["favorite__user"] = self.request.user
 
         return queryset.filter(**filters).distinct()
 
@@ -186,41 +192,52 @@ class RecipeViewSet(viewsets.ModelViewSet):
             response["Content-Disposition"] = (
                 'attachment; filename="shopping_list.txt"'
             )
-            response.status_code = status.HTTP_200_OK
             return response
 
-        ingredients = (
-            RecipeIngredient.objects.filter(recipe__shoppingcart__user=user)
-            .values("ingredient__name", "ingredient__measurement_unit")
-            .annotate(total_amount=Sum("amount"))
-            .order_by("ingredient__name")
-        )
+        try:
+            ingredients = (
+                RecipeIngredient.objects.filter(
+                    recipe__shoppingcart__user=user)
+                .values("ingredient__name", "ingredient__measurement_unit")
+                .annotate(total_amount=Sum("amount"))
+                .order_by("ingredient__name")
+            )
 
-        buffer = io.StringIO()
-        writer = csv.writer(buffer, delimiter="\t")
-        writer.writerow(["Список покупок"])
-        writer.writerow(["Ингредиенты", "Количество", "Ед. измерения"])
+            if not ingredients.exists():
+                return Response(
+                    {"error": "Список покупок пуст"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
-        for item in ingredients:
-            writer.writerow(
-                [
+            buffer = io.StringIO()
+            writer = csv.writer(buffer, delimiter="\t")
+            writer.writerow(["Список покупок"])
+            writer.writerow(["Ингредиенты", "Количество", "Ед. измерения"])
+
+            for item in ingredients:
+                writer.writerow([
                     item["ingredient__name"],
                     item["total_amount"],
                     item["ingredient__measurement_unit"],
-                ]
+                ])
+
+            content = buffer.getvalue()
+            buffer.close()
+
+            cache.set(cache_key, content, 300)  # кэшируем на 5 минут
+
+            response = HttpResponse(content, content_type="text/csv")
+            response["Content-Disposition"] = (
+                'attachment; filename="shopping_list.txt"'
             )
+            return response
 
-        content = buffer.getvalue()
-        buffer.close()
-
-        cache.set(cache_key, content, 300)  # кэшируем на 5 минут
-
-        response = HttpResponse(content, content_type="text/csv")
-        response["Content-Disposition"] = (
-            'attachment; filename="shopping_list.txt"'
-        )
-        response.status_code = status.HTTP_200_OK
-        return response
+        except Exception as e:
+            logger.error(f"Error generating shopping cart: {str(e)}")
+            return Response(
+                {"error": "Ошибка при формировании списка покупок"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     @action(detail=True, methods=["get"], url_path="get-link")
     def get_link(self, request, pk=None):
@@ -229,12 +246,19 @@ class RecipeViewSet(viewsets.ModelViewSet):
         hash_input = f"{recipe.id}{recipe.name}{recipe.created_at}"
         url_hash = self.generate_hash(hash_input)
 
-        short_link, created = RecipeShortLink.objects.get_or_create(
-            recipe=recipe, defaults={"url_hash": url_hash}
-        )
+        try:
+            short_link, created = RecipeShortLink.objects.get_or_create(
+                recipe=recipe, defaults={"url_hash": url_hash}
+            )
 
-        short_url = f"{settings.BASE_URL}/a/r/{short_link.url_hash}"
-        return Response({"short-link": short_url})
+            short_url = f"{settings.BASE_URL}/a/r/{short_link.url_hash}"
+            return Response({"short-link": short_url})
+        except Exception as e:
+            logger.error(f"Error generating short link: {str(e)}")
+            return Response(
+                {"error": "Ошибка при создании короткой ссылки"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     def generate_hash(self, input_str):
         """Генерирует 8-символьный хэш из входной строки.

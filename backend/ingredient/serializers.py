@@ -13,14 +13,16 @@ class CreateIngredientSerializer(serializers.Serializer):
 
     def validate_id(self, value):
         if not Ingredient.objects.filter(id=value).exists():
-            raise serializers.ValidationError("Ингредиент с указанным id не существует")
+            raise serializers.ValidationError(
+                "Ингредиент с указанным id не существует")
         return value
 
 
 class IngredientSerializer(serializers.ModelSerializer):
     id = serializers.ReadOnlyField(source="ingredient.id")
     name = serializers.ReadOnlyField(source="ingredient.name")
-    measurement_unit = serializers.ReadOnlyField(source="ingredient.measurement_unit")
+    measurement_unit = serializers.ReadOnlyField(
+        source="ingredient.measurement_unit")
 
     class Meta:
         model = RecipeIngredient

@@ -28,13 +28,15 @@ class ImageField(serializers.ImageField):
                 logger.warning(
                     "Invalid image data format: " "missing data:image prefix"
                 )
-                raise serializers.ValidationError(ERROR_MESSAGES["invalid_base64"])
+                raise serializers.ValidationError(
+                    ERROR_MESSAGES["invalid_base64"])
 
             try:
                 format_part, imgstr = data.split(";base64,", 1)
             except ValueError:
                 logger.warning("Invalid base64 format: missing separator")
-                raise serializers.ValidationError(ERROR_MESSAGES["invalid_base64"])
+                raise serializers.ValidationError(
+                    ERROR_MESSAGES["invalid_base64"])
 
             try:
                 ext = format_part.split("/")[-1].lower()
@@ -54,14 +56,17 @@ class ImageField(serializers.ImageField):
                 decoded_file = base64.b64decode(imgstr)
             except (TypeError, binascii.Error) as e:
                 logger.error(f"Base64 decoding error: {str(e)}")
-                raise serializers.ValidationError(ERROR_MESSAGES["invalid_base64_data"])
+                raise serializers.ValidationError(
+                    ERROR_MESSAGES["invalid_base64_data"])
 
             if len(decoded_file) > MAX_IMAGE_SIZE:
                 logger.warning(
                     f"Image size exceeds limit: " f"{len(decoded_file)} bytes"
                 )
                 raise serializers.ValidationError(
-                    ERROR_MESSAGES.get("image_too_large", "Image size exceeds limit")
+                    ERROR_MESSAGES.get(
+                        "image_too_large", "Image size exceeds limit"
+                    )
                 )
 
             data = ContentFile(decoded_file, name=f"photo.{ext}")

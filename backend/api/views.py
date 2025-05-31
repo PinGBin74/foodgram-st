@@ -50,7 +50,8 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
 def redirect_by_hash(request, url_hash):
     if not url_hash:
         return Response(
-            {"error": "Invalid link format"}, status=status.HTTP_400_BAD_REQUEST
+            {"error": "Invalid link format"},
+            status=status.HTTP_400_BAD_REQUEST,
         )
 
     try:
@@ -66,7 +67,8 @@ def redirect_by_hash(request, url_hash):
         return redirect(f"{settings.BASE_URL}/api/recipes/{recipe_id}")
     except RecipeShortLink.DoesNotExist:
         logger.error(f"Short link not found for hash: {url_hash}")
-        return Response({"error": "Recipe not found"}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"error": "Recipe not found"},
+                        status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         logger.error(f"Error redirecting hash {url_hash}: {str(e)}")
         return Response(

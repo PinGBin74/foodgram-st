@@ -1,19 +1,21 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 
+from const.const import MAX_LENGTH_NAME
+
 User = get_user_model()
 
 
 class Ingredient(models.Model):
     name = models.CharField(
         verbose_name="Название ингредиента",
-        max_length=128,
+        max_length=MAX_LENGTH_NAME,
         unique=True,
         db_index=True,
     )
     measurement_unit = models.CharField(
         verbose_name="Единица измерения",
-        max_length=128,
+        max_length=MAX_LENGTH_NAME,
     )
 
     class Meta:

@@ -2,6 +2,12 @@ from django.db import models
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
 
+from const.const import (
+    MAX_LENGTH_NAME,
+    MAX_LENGTH_RECIPE_SHORT_LINK,
+    MIN_COOK_TIME,
+    MIN_VALUE_AMOUNT,
+)
 from ingredient.models import Ingredient
 
 
@@ -11,7 +17,7 @@ User = get_user_model()
 class Recipe(models.Model):
     name = models.CharField(
         verbose_name="Название рецепта",
-        max_length=128,
+        max_length=MAX_LENGTH_NAME,
         db_index=True,
     )
     author = models.ForeignKey(
@@ -37,7 +43,7 @@ class Recipe(models.Model):
         verbose_name="Время приготовления (минуты)",
         validators=[
             MinValueValidator(
-                1,
+                MIN_COOK_TIME,
                 message="Время не может быть меньше 1 минуты",
             ),
         ],
@@ -72,7 +78,7 @@ class RecipeIngredient(models.Model):
     amount = models.PositiveSmallIntegerField(
         verbose_name="Количество",
         validators=[MinValueValidator(
-            1,
+            MIN_VALUE_AMOUNT,
             message="Количество не может быть менее 1")],
     )
 
@@ -165,7 +171,10 @@ class RecipeShortLink(models.Model):
     recipe = models.ForeignKey(Recipe, verbose_name="Рецепт", on_delete=models.
                                CASCADE)
     url_hash = models.CharField(
-        verbose_name="Хэш", max_length=10, unique=True, db_index=True
+        verbose_name="Хэш",
+        max_length=MAX_LENGTH_RECIPE_SHORT_LINK,
+        unique=True,
+        db_index=True,
     )
     created_at = models.DateTimeField(
         verbose_name="Дата создания ссылки", auto_now_add=True

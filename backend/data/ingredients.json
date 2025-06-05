@@ -1,0 +1,42 @@
+[
+    {
+        "name": "Мука пшеничная",
+        "measurement_unit": "г"
+    },
+    {
+        "name": "Сахар",
+        "measurement_unit": "г"
+    },
+    {
+        "name": "Соль",
+        "measurement_unit": "г"
+    },
+    {
+        "name": "Молоко",
+        "measurement_unit": "мл"
+    },
+    {
+        "name": "Яйцо куриное",
+        "measurement_unit": "шт"
+    },
+    {
+        "name": "Масло сливочное",
+        "measurement_unit": "г"
+    },
+    {
+        "name": "Масло подсолнечное",
+        "measurement_unit": "мл"
+    },
+    {
+        "name": "Вода",
+        "measurement_unit": "мл"
+    },
+    {
+        "name": "Перец черный",
+        "measurement_unit": "г"
+    },
+    {
+        "name": "Лук репчатый",
+        "measurement_unit": "шт"
+    }
+]

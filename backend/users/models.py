@@ -16,12 +16,14 @@ class User(AbstractUser):
         help_text="Уникальный юзернейм",
     )
     first_name = models.CharField(
-        max_length=150, verbose_name="Имя",
-        help_text="Имя пользователя"
+        max_length=150,
+        verbose_name="Имя",
+        help_text="Имя пользователя",
     )
     last_name = models.CharField(
-        max_length=150, verbose_name="Фамилия",
-        help_text="Фамилия пользователя"
+        max_length=150,
+        verbose_name="Фамилия",
+        help_text="Фамилия пользователя",
     )
     avatar = models.ImageField(
         upload_to="users/avatars",
@@ -30,20 +32,9 @@ class User(AbstractUser):
         verbose_name="Аватар",
         help_text="Аватар пользователя",
     )
-    groups = models.ManyToManyField(
-        'auth.Group',
-        related_name='custom_user_set',
-        blank=True,
-        help_text='The groups this user belongs to.',
-        verbose_name='groups',
-    )
-    user_permissions = models.ManyToManyField(
-        'auth.Permission',
-        related_name='custom_user_set',
-        blank=True,
-        help_text='Specific permissions for this user.',
-        verbose_name='user permissions',
-    )
+
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = ["username", "first_name", "last_name"]
 
     class Meta:
         verbose_name = "Пользователь"
@@ -61,7 +52,6 @@ class Follow(models.Model):
         related_name="follower",
         verbose_name="Подписчик",
         help_text="Пользователь, который подписывается",
-
     )
     following = models.ForeignKey(
         User,
@@ -75,11 +65,9 @@ class Follow(models.Model):
         verbose_name = "Подписка"
         verbose_name_plural = "Подписки"
         constraints = [
-            models.UniqueConstraint(fields=["user", "following"],
-                                    name="unique_follow"),
+            models.UniqueConstraint(fields=["user", "following"], name="unique_follow"),
             models.CheckConstraint(
-                check=~models.Q(user=models.F("following")),
-                name="no_self_follow"
+                check=~models.Q(user=models.F("following")), name="no_self_follow"
             ),
         ]
 

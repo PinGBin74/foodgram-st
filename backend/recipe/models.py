@@ -21,8 +21,7 @@ class Recipe(models.Model):
         verbose_name="Картинка",
         help_text="Картинка рецепта",
     )
-    text = models.TextField(verbose_name="Описание",
-                            help_text="Описание рецепта")
+    text = models.TextField(verbose_name="Описание", help_text="Описание рецепта")
     ingredients = models.ManyToManyField(
         Ingredient,
         through="RecipeIngredient",
@@ -46,8 +45,7 @@ class Recipe(models.Model):
         verbose_name_plural = "Рецепты"
         ordering = ["-pub_date"]
         constraints = [
-            models.UniqueConstraint(fields=["author", "name"],
-                                    name="unique_recipe")
+            models.UniqueConstraint(fields=["author", "name"], name="unique_recipe")
         ]
 
     def __str__(self):
@@ -79,8 +77,7 @@ class RecipeIngredient(models.Model):
         verbose_name_plural = "Ингредиенты в рецептах"
         constraints = [
             models.UniqueConstraint(
-                fields=["recipe", "ingredient"],
-                name="unique_recipe_ingredient"
+                fields=["recipe", "ingredient"], name="unique_recipe_ingredient"
             )
         ]
 
@@ -110,8 +107,7 @@ class Favorite(models.Model):
         verbose_name = "Избранное"
         verbose_name_plural = "Избранное"
         constraints = [
-            models.UniqueConstraint(fields=["user", "recipe"],
-                                    name="unique_favorite")
+            models.UniqueConstraint(fields=["user", "recipe"], name="unique_favorite")
         ]
 
     def __str__(self):

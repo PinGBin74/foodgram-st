@@ -16,12 +16,25 @@ class Base64ImageField(serializers.ImageField):
 
 class UserCreateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True)
-    first_name = serializers.CharField(required=True)
-    last_name = serializers.CharField(required=True)
+    first_name = serializers.CharField(required=True, max_length=150)
+    last_name = serializers.CharField(required=True, max_length=150)
+    email = serializers.EmailField(required=True, max_length=254)
+    username = serializers.CharField(required=True, max_length=150)
 
     class Meta:
         model = User
         fields = ("id", "email", "username", "first_name", "last_name", "password")
+
+    def validate(self, data):
+        if User.objects.filter(email=data["email"]).exists():
+            raise serializers.ValidationError(
+                {"email": "Пользователь с таким Электронная почта уже существует."}
+            )
+        if User.objects.filter(username=data["username"]).exists():
+            raise serializers.ValidationError(
+                {"username": "Пользователь с таким Имя пользователя уже существует."}
+            )
+        return data
 
     def create(self, validated_data):
         user = User.objects.create_user(
@@ -45,6 +58,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
 class CustomUserSerializer(serializers.ModelSerializer):
     is_subscribed = serializers.SerializerMethodField()
+    avatar = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -64,19 +78,44 @@ class CustomUserSerializer(serializers.ModelSerializer):
             return Follow.objects.filter(user=request.user, following=obj).exists()
         return False
 
+    def get_avatar(self, obj):
+        request = self.context.get("request")
+        if request and request.user.is_authenticated and obj.avatar:
+            return request.build_absolute_uri(obj.avatar.url)
+        return None
+
+    def to_representation(self, instance):
+        if not instance.is_authenticated:
+            return {
+                "id": None,
+                "email": None,
+                "username": None,
+                "first_name": None,
+                "last_name": None,
+                "is_subscribed": False,
+                "avatar": None,
+            }
+        return super().to_representation(instance)
+
 
 class AvatarSerializer(serializers.ModelSerializer):
-    avatar = Base64ImageField()
+    avatar = Base64ImageField(required=True)
 
     class Meta:
         model = User
         fields = ("avatar",)
+
+    def validate_avatar(self, value):
+        if not value:
+            raise serializers.ValidationError("Поле avatar обязательно.")
+        return value
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
     is_subscribed = serializers.SerializerMethodField()
+    avatar = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -107,3 +146,13 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
     def get_is_subscribed(self, obj):
         return True
+
+    def get_avatar(self, obj):
+        if obj.avatar:
+            return self.context["request"].build_absolute_uri(obj.avatar.url)
+        return None
+
+
+class SetPasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True)

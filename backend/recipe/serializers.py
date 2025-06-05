@@ -76,6 +76,17 @@ class RecipeSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     f'Ингредиент с id {item["ingredient"]["id"]} не существует.'
                 )
+            if item.get("amount", 0) < 1:
+                raise serializers.ValidationError(
+                    "Количество ингредиента должно быть больше 0."
+                )
+        return value
+
+    def validate_cooking_time(self, value):
+        if value < 1:
+            raise serializers.ValidationError(
+                "Время приготовления должно быть больше 0."
+            )
         return value
 
     def create_ingredients(self, recipe, ingredients_data):
@@ -91,9 +102,7 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         ingredients_data = validated_data.pop("recipe_ingredients")
-        recipe = Recipe.objects.create(
-            author=self.context["request"].user, **validated_data
-        )
+        recipe = Recipe.objects.create(**validated_data)
         self.create_ingredients(recipe, ingredients_data)
         return recipe
 

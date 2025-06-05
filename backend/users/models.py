@@ -61,6 +61,7 @@ class Follow(models.Model):
         related_name="follower",
         verbose_name="Подписчик",
         help_text="Пользователь, который подписывается",
+
     )
     following = models.ForeignKey(
         User,

@@ -119,6 +119,7 @@ DATABASES = {
     }
 }
 
+
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 
@@ -178,31 +179,32 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.TokenAuthentication",
     ],
-    "DEFAULT_PAGINATION_CLASS": ("rest_framework.pagination.PageNumberPagination"),
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 6,
     "DEFAULT_THROTTLE_CLASSES": [
         "rest_framework.throttling.AnonRateThrottle",
         "rest_framework.throttling.UserRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {"anon": "100/hour", "user": "1000/hour"},
+    "DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"],
 }
 
-# DJOSER = {
-#     "LOGIN_FIELD": "email",
-#     "HIDE_USERS": False,
-#     "PASSWORD_CHANGED_EMAIL_CONFIRMATION": False,
-#     "TOKEN_MODEL": "rest_framework.authtoken.models.Token",
-#     "SERIALIZERS": {
-#         "user": "api.serializers.UserSerializer",
-#         "current_user": "api.serializers.UserSerializer",
-#     },
-#     "PERMISSIONS": {
-#         "user": ["rest_framework.permissions.IsAuthenticatedOrReadOnly"],
-#         "user_list": ["rest_framework.permissions.IsAuthenticatedOrReadOnly"],
-#         "current_user": ["rest_framework.permissions.IsAuthenticated"],
-#     },
-# }
-
+DJOSER = {
+    "LOGIN_FIELD": "email",
+    "HIDE_USERS": False,
+    "PASSWORD_CHANGED_EMAIL_CONFIRMATION": False,
+    "TOKEN_MODEL": "rest_framework.authtoken.models.Token",
+    "SERIALIZERS": {
+        "user": "users.serializers.CustomUserSerializer",
+        "user_create": "users.serializers.UserCreateSerializer",
+        "current_user": "users.serializers.CustomUserSerializer",
+    },
+    "PERMISSIONS": {
+        "user": ["rest_framework.permissions.IsAuthenticatedOrReadOnly"],
+        "user_list": ["rest_framework.permissions.IsAuthenticatedOrReadOnly"],
+        "current_user": ["rest_framework.permissions.IsAuthenticated"],
+    },
+}
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
